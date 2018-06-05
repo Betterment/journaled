@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "title": "base_event",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "event_type",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    }
+  }
+}

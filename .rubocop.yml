@@ -1,0 +1,9 @@
+inherit_gem:
+  rubocop-betterment:
+    - config/default.yml
+
+AllCops:
+  TargetRubyVersion: 2.4.2
+  Exclude:
+    - 'spec/dummy/db/**/*'
+    - 'vendor/**/*'

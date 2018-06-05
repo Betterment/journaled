@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "title": "journaled/change",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "event_type",
+    "created_at",
+    "table_name",
+    "record_id",
+    "database_operation",
+    "logical_operation",
+    "changes",
+    "actor"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "table_name": {
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "database_operation": {
+      "type": "string",
+      "enum": ["create", "update", "delete"]
+    },
+    "logical_operation": {
+      "type": "string"
+    },
+    "changes": {
+      "type": "string"
+    },
+    "actor": {
+      "type": ["string", null]
+    }
+  }
+}
+

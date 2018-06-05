@@ -1,0 +1,204 @@
+---
+version: 2
+jobs:
+  started:
+    resource_class: small
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/notifier:latest
+    steps:
+    - run:
+        name: notify coach of Workflow Starts
+        command: notify_coach workflow_starts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
+  completed:
+    resource_class: small
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/notifier:latest
+    steps:
+    - run:
+        name: notify coach of Workflow Successes
+        command: notify_coach workflow_successes
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
+  journaled--lint (Gemfile):
+    resource_class: small
+    environment:
+      BUNDLE_GEMFILE: Gemfile
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby:2.4.2
+      environment:
+        GEM_SOURCE: https://rubygems.org
+        RAILS_ENV: test
+        RACK_ENV: test
+    steps:
+    - run:
+        name: Generate git refs cache key
+        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
+    - restore_cache:
+        keys:
+        - v1-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+        - v1-git-refs-
+    - run:
+        name: Checkout code
+        command: checkout
+    - save_cache:
+        paths: ".git"
+        key: v1-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - restore_cache:
+        keys:
+        - v0-journaled-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+          }}-{{ checksum "./journaled.gemspec" }}
+        - v0-journaled-Gemfile-
+    - run:
+        name: install dependencies
+        command: |
+          cd .
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=4 --retry=3 --path vendor/bundle
+    - save_cache:
+        paths:
+        - "./vendor/bundle"
+        key: v0-journaled-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+          }}-{{ checksum "./journaled.gemspec" }}
+    - run:
+        name: run rubocop
+        command: |
+          cd .
+          mkdir -p /tmp/artifacts
+          bundle exec rubocop --format progress \
+                              --format html \
+                              --out /tmp/artifacts/rubocop-report.html
+    - store_artifacts:
+        path: "/tmp/artifacts"
+        destination: artifacts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
+  journaled--test (Gemfile):
+    resource_class: small
+    environment:
+      BUNDLE_GEMFILE: Gemfile
+    parallelism: 1
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby:2.4.2
+      environment:
+        GEM_SOURCE: https://rubygems.org
+        RAILS_ENV: test
+        RACK_ENV: test
+    - image: circleci/postgres:9.4
+      command: postgres --max_prepared_transactions=100
+      environment:
+        POSTGRES_USER: betterment
+    steps:
+    - run:
+        name: Generate git refs cache key
+        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
+    - restore_cache:
+        keys:
+        - v1-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+        - v1-git-refs-
+    - run:
+        name: Checkout code
+        command: checkout
+    - save_cache:
+        paths: ".git"
+        key: v1-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - restore_cache:
+        keys:
+        - v0-journaled-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+          }}-{{ checksum "./journaled.gemspec" }}
+        - v0-journaled-Gemfile-
+    - run:
+        name: install dependencies
+        command: |
+          cd .
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=4 --retry=3 --path vendor/bundle
+    - save_cache:
+        paths:
+        - "./vendor/bundle"
+        key: v0-journaled-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+          }}-{{ checksum "./journaled.gemspec" }}
+    - run:
+        name: wait for postgresql db
+        command: dockerize -wait tcp://localhost:5432 -timeout 1m
+    - run:
+        name: setup database
+        command: |
+          cd .
+          bundle exec rake db:test:prepare
+    - run:
+        name: run rspec tests
+        command: |
+          cd .
+          mkdir -p /tmp/artifacts
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          echo "RSpec file pattern: $TEST_FILES"
+          bundle exec rspec --format progress \
+                            --format RspecJunitFormatter \
+                            --out /tmp/artifacts/rspec.xml \
+                            -- \
+                            $TEST_FILES
+    - run:
+        name: save screenshots
+        command: |
+          cd .
+          if [ -d spec/error_screenshots ]; then
+            mv spec/error_screenshots /tmp/artifacts
+          fi
+        when: always
+    - run:
+        name: save rspec example persistance file
+        command: |
+          cd .
+          if [ -f spec/examples.txt ]; then
+            mv spec/examples.txt /tmp/artifacts
+          fi
+        when: always
+    - store_test_results:
+        path: "/tmp/artifacts"
+    - store_artifacts:
+        path: "/tmp/artifacts"
+        destination: artifacts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
+workflows:
+  version: 2
+  all:
+    jobs:
+    - started:
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+    - completed:
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+        requires:
+        - started
+        - journaled--lint (Gemfile)
+        - journaled--test (Gemfile)
+    - journaled--lint (Gemfile):
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+        requires:
+        - started
+    - journaled--test (Gemfile):
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+        requires:
+        - started
