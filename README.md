@@ -24,7 +24,7 @@ durable, eventually consistent record that discrete events happened.
 if you haven't already.
 
 
-2. To integrate Journaled into your application, simply include the gem in your 
+2. To integrate Journaled into your application, simply include the gem in your
 app's Gemfile.
 
     ```ruby
@@ -119,7 +119,7 @@ additional `force: true` argument if they would interfere with change
 journaling. Note that the less-frequently-used methods `toggle`,
 `increment*`, `decrement*`, and `update_counters` are not intercepted at
 this time.
- 
+
 #### Testing
 
 If you use RSpec (and have required `journaled/rspec` in your
@@ -134,13 +134,13 @@ end
 
 ### Custom Journaling
 
-For every custom implementation of journaling in your application, define the JSON schema for the attributes in your event. 
-This schema file should live in your Rails application at the top level and should be named in snake case to match the 
+For every custom implementation of journaling in your application, define the JSON schema for the attributes in your event.
+This schema file should live in your Rails application at the top level and should be named in snake case to match the
 class being journaled.
     E.g.: `your_app/journaled_schemas/my_class.json)`
-    
-In each class you intend to use Journaled, include the `Journaled::Event` module and define the attributes you want 
-captured. After completing the above steps, you can call the `journal!` method in the model code and the declared 
+
+In each class you intend to use Journaled, include the `Journaled::Event` module and define the attributes you want
+captured. After completing the above steps, you can call the `journal!` method in the model code and the declared
 attributes will be published to the Kinesis stream. Be sure to call
 `journal!` within the same transaction as any database side effects of
 your business logic operation to ensure that the event will eventually
@@ -184,7 +184,7 @@ end
 
 class ContractAcceptance
   include ActiveModel::Model
-  
+
   attr_accessor :user_id, :signature
 
   def user
