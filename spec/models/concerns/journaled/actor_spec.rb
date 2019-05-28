@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # This is a controller mixin, but testing as a model spec!
 RSpec.describe Journaled::Actor do
-  let(:user) { double("User") }
+  let(:user) { double }
   let(:klass) do
     Class.new do
       cattr_accessor :before_actions
