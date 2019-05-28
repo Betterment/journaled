@@ -31,7 +31,7 @@ RSpec.describe Journaled::Actor do
   it "Stores a thunk returning nil if current_user returns nil" do
     subject.trigger_before_actions
 
-    allow(subject).to receive(:current_user).and_return(nil)
+    allow(subject).to receive(:current_user).and_return(nil) # rubocop:disable RSpec/SubjectStub
 
     expect(RequestStore.store[:journaled_actor_proc].call).to eq nil
   end
@@ -39,7 +39,7 @@ RSpec.describe Journaled::Actor do
   it "Stores a thunk returning current_user if it is set when called" do
     subject.trigger_before_actions
 
-    allow(subject).to receive(:current_user).and_return(user)
+    allow(subject).to receive(:current_user).and_return(user) # rubocop:disable RSpec/SubjectStub
 
     expect(RequestStore.store[:journaled_actor_proc].call).to eq user
   end
