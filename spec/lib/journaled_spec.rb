@@ -43,8 +43,9 @@ RSpec.describe Journaled do
   end
 
   describe "#actor_uri" do
+    let(:uri_provider_double) { instance_double(Journaled::ActorUriProvider, actor_uri: "my actor uri") }
     it "delegates to ActorUriProvider" do
-      allow(Journaled::ActorUriProvider).to receive(:instance).and_return(double(actor_uri: "my actor uri"))
+      allow(Journaled::ActorUriProvider).to receive(:instance).and_return(uri_provider_double)
       expect(described_class.actor_uri).to eq "my actor uri"
     end
   end
