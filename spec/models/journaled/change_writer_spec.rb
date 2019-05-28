@@ -3,8 +3,8 @@ require 'rails_helper'
 RSpec.describe Journaled::ChangeWriter do
   let(:model) do
     now = Time.zone.now
-    double(
-      "Soldier",
+    instance_double(
+      ActiveRecord::Base,
       id: 28_473,
       class: model_class,
       attributes: {
@@ -21,8 +21,8 @@ RSpec.describe Journaled::ChangeWriter do
   end
 
   let(:model_class) do
-    double(
-      "SoldierClass",
+    class_double(
+      'Soldier',
       table_name: "soldiers",
       attribute_names: %w(id name rank serial_number last_sign_in_at)
     )
@@ -50,18 +50,18 @@ RSpec.describe Journaled::ChangeWriter do
 
   describe "#relevant_attributes" do
     let(:model) do
-      double(
-        "Soldier",
-        id: 28_473,
-        class: model_class,
-        attributes: {
-          "name" => "bill",
-          "rank" => "first lieutenant",
-          "serial_number" => "foobar",
-          "last_sign_in_at" => Time.zone.now
-        },
-        saved_changes: {}
-      )
+      instance_double(
+        ActiveRecord::Base,
+         id: 28_473,
+         class: model_class,
+         attributes: {
+           "name" => "bill",
+           "rank" => "first lieutenant",
+           "serial_number" => "foobar",
+           "last_sign_in_at" => Time.zone.now
+         },
+         saved_changes: {}
+       )
     end
 
     it "returns all relevant attributes regardless of saved changes" do
@@ -75,20 +75,20 @@ RSpec.describe Journaled::ChangeWriter do
 
   describe "#relevant_unperturbed_attributes" do
     let(:model) do
-      double(
-        "Soldier",
-        id: 28_473,
-        class: model_class,
-        attributes: {
-          "name" => "bill",
-          "rank" => "first lieutenant",
-          "serial_number" => "foobar",
-          "last_sign_in_at" => Time.zone.now
-        },
-        changes: {
-          "name" => %w(bob bill)
-        }
-      )
+      instance_double(
+        ActiveRecord::Base,
+         id: 28_473,
+         class: model_class,
+         attributes: {
+           "name" => "bill",
+           "rank" => "first lieutenant",
+           "serial_number" => "foobar",
+           "last_sign_in_at" => Time.zone.now
+         },
+         changes: {
+           "name" => %w(bob bill)
+         }
+       )
     end
 
     it "returns the pre-change value of the attributes, regardless of whether they changed" do
@@ -107,8 +107,10 @@ RSpec.describe Journaled::ChangeWriter do
   end
 
   describe "#actor_uri" do
+    let(:uri_provider_double) { instance_double(Journaled::ActorUriProvider, actor_uri: "my actor uri") }
+
     it "delegates to ActorUriProvider" do
-      allow(Journaled::ActorUriProvider).to receive(:instance).and_return(double(actor_uri: "my actor uri"))
+      allow(Journaled::ActorUriProvider).to receive(:instance).and_return(uri_provider_double)
       expect(Journaled.actor_uri).to eq "my actor uri"
     end
   end
@@ -172,18 +174,18 @@ RSpec.describe Journaled::ChangeWriter do
 
     describe "#create" do
       let(:model) do
-        double(
-          "Soldier",
-          id: 28_473,
-          class: model_class,
-          attributes: {
-            "name" => "bill",
-            "rank" => "first lieutenant",
-            "serial_number" => "foobar",
-            "last_sign_in_at" => Time.zone.now
-          },
-          saved_changes: {}
-        )
+        instance_double(
+          ActiveRecord::Base,
+           id: 28_473,
+           class: model_class,
+           attributes: {
+             "name" => "bill",
+             "rank" => "first lieutenant",
+             "serial_number" => "foobar",
+             "last_sign_in_at" => Time.zone.now
+           },
+           saved_changes: {}
+         )
       end
 
       it "always journals all relevant attributes, even if unchanged" do
@@ -214,18 +216,18 @@ RSpec.describe Journaled::ChangeWriter do
 
       context "with no changes" do
         let(:model) do
-          double(
-            "Soldier",
-            id: 28_473,
-            class: model_class,
-            attributes: {
-              "name" => "bill",
-              "rank" => "first lieutenant",
-              "serial_number" => "foobar",
-              "last_sign_in_at" => Time.zone.now
-            },
-            saved_changes: {}
-          )
+          instance_double(
+            ActiveRecord::Base,
+             id: 28_473,
+             class: model_class,
+             attributes: {
+               "name" => "bill",
+               "rank" => "first lieutenant",
+               "serial_number" => "foobar",
+               "last_sign_in_at" => Time.zone.now
+             },
+             saved_changes: {}
+           )
         end
 
         it "doesn't journal" do
@@ -240,20 +242,20 @@ RSpec.describe Journaled::ChangeWriter do
     describe "#delete" do
       let(:model) do
         now = Time.zone.now
-        double(
-          "Soldier",
-          id: 28_473,
-          class: model_class,
-          attributes: {
-            "name" => "bob",
-            "rank" => "first lieutenant",
-            "serial_number" => "foobar",
-            "last_sign_in_at" => now
-          },
-          changes: {
-            "name" => %w(bill bob)
-          }
-        )
+        instance_double(
+          ActiveRecord::Base,
+           id: 28_473,
+           class: model_class,
+           attributes: {
+             "name" => "bob",
+             "rank" => "first lieutenant",
+             "serial_number" => "foobar",
+             "last_sign_in_at" => now
+           },
+           changes: {
+             "name" => %w(bill bob)
+           }
+         )
       end
 
       it "journals the unperturbed values of all relevant attributes" do

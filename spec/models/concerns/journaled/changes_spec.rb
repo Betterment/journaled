@@ -44,7 +44,7 @@ RSpec.describe Journaled::Changes do
 
   subject { klass.new }
 
-  let(:change_writer) { double(Journaled::ChangeWriter, create: true, update: true, delete: true) }
+  let(:change_writer) { instance_double(Journaled::ChangeWriter, create: true, update: true, delete: true) }
 
   before do
     allow(Journaled::ChangeWriter).to receive(:new) do |opts|
