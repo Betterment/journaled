@@ -4,7 +4,7 @@ jobs:
   started:
     resource_class: small
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:1
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:v1.x
     working_directory: "~/journaled"
     steps:
     - run:
@@ -17,7 +17,7 @@ jobs:
   completed:
     resource_class: small
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:1
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:v1.x
     working_directory: "~/journaled"
     steps:
     - run:
@@ -32,7 +32,7 @@ jobs:
     environment:
       BUNDLE_GEMFILE: Gemfile
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:2
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
@@ -54,9 +54,9 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v0-journaled-2.4.2-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+        - v0-journaled-2.6.1-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
           }}-{{ checksum "./journaled.gemspec" }}
-        - v0-journaled-2.4.2-Gemfile-
+        - v0-journaled-2.6.1-Gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -66,7 +66,7 @@ jobs:
     - save_cache:
         paths:
         - "./vendor/bundle"
-        key: v0-journaled-2.4.2-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+        key: v0-journaled-2.6.1-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
           }}-{{ checksum "./journaled.gemspec" }}
     - run:
         name: run rubocop
@@ -90,12 +90,12 @@ jobs:
       EAGER_LOAD: true
     parallelism: 1
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:2
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
         RACK_ENV: test
-    - image: circleci/postgres:9.4
+    - image: circleci/postgres:9.6
       command: postgres --max_prepared_transactions=100
       environment:
         POSTGRES_USER: betterment
@@ -116,9 +116,9 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v0-journaled-2.4.2-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+        - v0-journaled-2.6.1-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
           }}-{{ checksum "./journaled.gemspec" }}
-        - v0-journaled-2.4.2-Gemfile-
+        - v0-journaled-2.6.1-Gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -128,7 +128,7 @@ jobs:
     - save_cache:
         paths:
         - "./vendor/bundle"
-        key: v0-journaled-2.4.2-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
+        key: v0-journaled-2.6.1-Gemfile-{{ checksum "./coach.yml" }}-{{ checksum "./Gemfile"
           }}-{{ checksum "./journaled.gemspec" }}
     - run:
         name: wait for postgresql db
@@ -218,4 +218,4 @@ workflows:
             ignore: "/^deploy-attempts-.*/"
         requires:
         - started
-coach_version: 0.18.10
+coach_version: 0.19.4
