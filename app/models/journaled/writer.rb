@@ -6,7 +6,7 @@ class Journaled::Writer
     journaled_app_name
   ).freeze
 
-  def initialize(journaled_event:, priority: Journaled::JobPriority::EVENTUAL)
+  def initialize(journaled_event:, priority: )
     raise "An enqueued event must respond to: #{EVENT_METHOD_NAMES.to_sentence}" unless respond_to_all?(journaled_event, EVENT_METHOD_NAMES)
 
     unless journaled_event.journaled_schema_name.present? &&
