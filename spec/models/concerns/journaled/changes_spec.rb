@@ -47,11 +47,13 @@ RSpec.describe Journaled::Changes do
   let(:change_writer) { instance_double(Journaled::ChangeWriter, create: true, update: true, delete: true) }
 
   before do
+    # rubocop:disable RSpec/ExpectInHook
     allow(Journaled::ChangeWriter).to receive(:new) do |opts|
       expect(opts[:model]).to eq(subject)
       expect(opts[:change_definition].logical_operation).to eq(:change_of_heart)
       change_writer
     end
+    # rubocop:enable RSpec/ExpectInHook
   end
 
   it "can be asserted on with our matcher" do
