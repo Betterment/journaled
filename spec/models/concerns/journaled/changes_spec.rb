@@ -17,6 +17,7 @@ RSpec.describe Journaled::Changes do
       def self.after_save(opts, &hook)
         # This is a back-door assertion to prevent regressions in the module's hook definition behavior
         raise "expected `unless: :saved_change_to_id?`" unless opts[:unless] == :saved_change_to_id?
+
         after_save_hooks << hook
       end
 

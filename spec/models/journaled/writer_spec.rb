@@ -38,7 +38,7 @@ RSpec.describe Journaled::Writer do
       end
 
       it 'does not raise on initialization' do
-        expect { subject }.to_not raise_error
+        expect { subject }.not_to raise_error
       end
     end
   end

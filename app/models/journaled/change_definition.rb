@@ -19,6 +19,7 @@ class Journaled::ChangeDefinition
 
         #{nonexistent_attribute_names.join(', ')}
     ERROR
+
     @validated = true
   end
 end
