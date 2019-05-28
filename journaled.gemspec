@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "pry-rails"
   s.add_development_dependency "rspec-rails"
   s.add_development_dependency "rspec_junit_formatter"
-  s.add_development_dependency "rubocop-betterment", "1.3.0"
+  s.add_development_dependency "rubocop-betterment", "1.8.0"
   s.add_development_dependency "timecop"
   s.add_development_dependency "webmock"
 end
