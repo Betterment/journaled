@@ -2,9 +2,9 @@ require 'rails_helper'
 
 RSpec.describe Journaled::ActorUriProvider do
   describe "#actor_uri" do
-    let(:request_store) { double(:[] => nil) }
-    let(:actor) { double(to_global_id: actor_gid) }
-    let(:actor_gid) { double(to_s: "my_fancy_gid") }
+    let(:request_store) { class_double(RequestStore, :[] => nil) }
+    let(:actor) { instance_double(ActiveRecord::Base, to_global_id: actor_gid) }
+    let(:actor_gid) { instance_double(GlobalID, to_s: "my_fancy_gid") }
     let(:program_name) { "/usr/local/bin/puma_or_something" }
 
     subject { described_class.instance }
