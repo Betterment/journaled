@@ -40,7 +40,7 @@ module Journaled::Event
   end
 
   def job_priority
-    Journaled::JobPriority::EVENTUAL
+    Journaled.default_job_priority
   end
 
   private

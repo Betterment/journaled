@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Writer do
-  subject { described_class.new journaled_event: journaled_event }
+  subject { described_class.new journaled_event: journaled_event, priority: Journaled::JobPriority::EVENTUAL }
 
   describe '#initialize' do
     context 'when the Journaled Event does not implement all the necessary methods' do

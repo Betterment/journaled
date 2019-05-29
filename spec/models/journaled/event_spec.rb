@@ -1,15 +1,15 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Event do
+  let(:sample_journaled_event_class_name) { 'SomeClassName' }
   let(:sample_journaled_event_class) do
-    SomeClassName = Class.new do
+    Class.new do
       include Journaled::Event
     end
   end
 
-  after do
-    Object.send(:remove_const, :SomeClassName) if defined?(SomeClassName)
-    Object.send(:remove_const, :SomeModule) if defined?(SomeModule)
+  before do
+    stub_const(sample_journaled_event_class_name, sample_journaled_event_class)
   end
 
   let(:sample_journaled_event) { sample_journaled_event_class.new }
@@ -23,7 +23,7 @@ RSpec.describe Journaled::Event do
 
     it 'creates a Journaled::Writer with this event and journals it' do
       sample_journaled_event.journal!
-      expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event)
+      expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: Journaled::JobPriority::EVENTUAL)
       expect(mock_journaled_writer).to have_received(:journal!)
     end
   end
@@ -34,12 +34,7 @@ RSpec.describe Journaled::Event do
     end
 
     context 'when the class is modularized' do
-      let(:sample_journaled_event_class) do
-        SomeModule = Module.new
-        SomeModule::SomeClassName = Class.new do
-          include Journaled::Event
-        end
-      end
+      let(:sample_journaled_event_class_name) { 'SomeModule::SomeClassName' }
 
       it 'returns the underscored version on the class name' do
         expect(sample_journaled_event.journaled_schema_name).to eq 'some_module/some_class_name'
@@ -53,12 +48,7 @@ RSpec.describe Journaled::Event do
     end
 
     context 'when the class is modularized' do
-      let(:sample_journaled_event_class) do
-        SomeModule = Module.new
-        SomeModule::SomeClassName = Class.new do
-          include Journaled::Event
-        end
-      end
+      let(:sample_journaled_event_class_name) { 'SomeModule::SomeClassName' }
 
       it 'returns the underscored version on the class name, with slashes replaced with underscores' do
         expect(sample_journaled_event.event_type).to eq 'some_module_some_class_name'
@@ -102,7 +92,7 @@ RSpec.describe Journaled::Event do
 
     context 'when there are additional attributes specified, but not defined' do
       let(:sample_journaled_event_class) do
-        SomeClassName = Class.new do
+        Class.new do
           include Journaled::Event
 
           journal_attributes :foo
@@ -116,7 +106,7 @@ RSpec.describe Journaled::Event do
 
     context 'when there are additional attributes specified and defined' do
       let(:sample_journaled_event_class) do
-        SomeClassName = Class.new do
+        Class.new do
           include Journaled::Event
 
           journal_attributes :foo, :bar
