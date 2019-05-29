@@ -4,7 +4,7 @@ RSpec.describe Journaled::ChangeWriter do
   let(:model) do
     now = Time.zone.now
     instance_double(
-      ActiveRecord::Base,
+      model_class,
       id: 28_473,
       class: model_class,
       attributes: {
@@ -19,14 +19,7 @@ RSpec.describe Journaled::ChangeWriter do
       }
     )
   end
-
-  let(:model_class) do
-    class_double(
-      'Soldier',
-      table_name: "soldiers",
-      attribute_names: %w(id name rank serial_number last_sign_in_at)
-    )
-  end
+  let(:model_class) { Soldier }
 
   let(:change_definition) do
     Journaled::ChangeDefinition.new(
@@ -51,7 +44,7 @@ RSpec.describe Journaled::ChangeWriter do
   describe "#relevant_attributes" do
     let(:model) do
       instance_double(
-        ActiveRecord::Base,
+        model_class,
          id: 28_473,
          class: model_class,
          attributes: {
@@ -76,7 +69,7 @@ RSpec.describe Journaled::ChangeWriter do
   describe "#relevant_unperturbed_attributes" do
     let(:model) do
       instance_double(
-        ActiveRecord::Base,
+        model_class,
          id: 28_473,
          class: model_class,
          attributes: {
@@ -155,8 +148,16 @@ RSpec.describe Journaled::ChangeWriter do
     end
 
     context "when model class defines journaled_app_name" do
-      before do
-        allow(model_class).to receive(:journaled_app_name).and_return("my_app")
+      let(:model_class) do
+        Class.new(ActiveRecord::Base) do
+          def self.table_name
+            'soldiers'
+          end
+
+          def self.journaled_app_name
+            "my_app"
+          end
+        end
       end
 
       it "sets journaled_app_name if model_class responds to it" do
@@ -175,7 +176,7 @@ RSpec.describe Journaled::ChangeWriter do
     describe "#create" do
       let(:model) do
         instance_double(
-          ActiveRecord::Base,
+          model_class,
            id: 28_473,
            class: model_class,
            attributes: {
@@ -217,7 +218,7 @@ RSpec.describe Journaled::ChangeWriter do
       context "with no changes" do
         let(:model) do
           instance_double(
-            ActiveRecord::Base,
+            model_class,
              id: 28_473,
              class: model_class,
              attributes: {
@@ -243,7 +244,7 @@ RSpec.describe Journaled::ChangeWriter do
       let(:model) do
         now = Time.zone.now
         instance_double(
-          ActiveRecord::Base,
+          model_class,
            id: 28_473,
            class: model_class,
            attributes: {
