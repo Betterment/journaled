@@ -24,7 +24,8 @@ RSpec.describe Journaled::Event do
     context 'when no app or model job priority is set' do
       it 'creates a Journaled::Writer with this event and journals it with the default priority' do
         sample_journaled_event.journal!
-        expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: Journaled::JobPriority::EVENTUAL)
+        expect(Journaled::Writer).to have_received(:new)
+          .with(journaled_event: sample_journaled_event, priority: Journaled::JobPriority::EVENTUAL)
         expect(mock_journaled_writer).to have_received(:journal!)
       end
     end
@@ -62,23 +63,23 @@ RSpec.describe Journaled::Event do
       end
     end
 
-      context 'when there is only a model priority' do
-        let(:sample_journaled_event_class) do
-          Class.new do
-            include Journaled::Event
+    context 'when there is only a model priority' do
+      let(:sample_journaled_event_class) do
+        Class.new do
+          include Journaled::Event
 
-            def job_priority
-              8
-            end
+          def job_priority
+            8
           end
         end
-
-        it 'creates a Journaled::Writer with this event and journals it with the given priorty for the model' do
-          sample_journaled_event.journal!
-          expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: 8)
-          expect(mock_journaled_writer).to have_received(:journal!)
-        end
       end
+
+      it 'creates a Journaled::Writer with this event and journals it with the given priorty for the model' do
+        sample_journaled_event.journal!
+        expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: 8)
+        expect(mock_journaled_writer).to have_received(:journal!)
+      end
+    end
   end
 
   describe '#journaled_schema_name' do
