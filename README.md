@@ -74,12 +74,13 @@ Journaling provides a number of different configuation options that can be set i
 #### `Journaled.default_app_name`
 
   This is described in the proceeding paragraph and is used to specify which app name to use, which corresponds to which Journaled Stream to send events too.
+  This is the default value for events that do NOT specify their own `#journaled_app_name`. For events that define their own `#journaled_event_name` method, that will take precedence over this default.
   Ex: `Journaled.default_app_name = 'my_app'`
 
-#### `Journaled.default_job_priority` (default: 20)
+#### `Journaled.job_priority` (default: 20)
 
   This can be used to configure what `priority` the Delayed Jobs are enqueued with. This will be applied to all the Journaled::Devivery jobs that are created by this application.
-  Ex: `Journaled.default_job_priority = 14`
+  Ex: `Journaled.job_priority = 14`
 
 
 ### Change Journaling

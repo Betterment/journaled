@@ -32,10 +32,10 @@ RSpec.describe Journaled::Event do
 
     context 'when there is an app job priority is set' do
       around do |example|
-        orig_priority = Journaled.default_job_priority
-        Journaled.default_job_priority = 13
+        orig_priority = Journaled.job_priority
+        Journaled.job_priority = 13
         example.run
-        Journaled.default_job_priority = orig_priority
+        Journaled.job_priority = orig_priority
       end
 
       it 'creates a Journaled::Writer with this event and journals it with the given priority' do
