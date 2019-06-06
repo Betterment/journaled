@@ -12,7 +12,7 @@ class Journaled::Delivery
   rescue Aws::Kinesis::Errors::InternalFailure, Aws::Kinesis::Errors::ServiceUnavailable, Aws::Kinesis::Errors::Http503Error => e
     Rails.logger.error "Kinesis Error - Server Error occurred - #{e.class}"
     raise KinesisTemporaryFailure
-  rescue Seahorse::Client::NetworkingError => e
+  rescue Aws::Kinesis::Errors::SeahorseClientNetworkingError => e
     Rails.logger.error "Kinesis Error - Networking Error occurred - #{e.class}"
     raise KinesisTemporaryFailure
   end
@@ -42,7 +42,11 @@ class Journaled::Delivery
   end
 
   def kinesis_client
-    @kinesis_client ||= Aws::Kinesis::Client.new(kinesis_client_config)
+    if ENV.key?('JOURNALED_IAM_ROLE_NAME')
+      Aws::Kinesis::Client.new(credentials: iam_assume_role_credentials)
+    else
+      Aws::Kinesis::Client.new(kinesis_client_config)
+    end
   end
 
   def legacy_credentials_hash
@@ -54,6 +58,14 @@ class Journaled::Delivery
     else
       {}
     end
+  end
+
+  def iam_assume_role_credentials
+    @iam_assume_role_credentials ||= Aws::AssumeRoleCredentials.new(
+      client: Aws::STS::Client.new(legacy_credentials_hash),
+      role_arn: ENV.fetch('JOURNALED_IAM_ROLE_NAME'),
+      role_session_name: "JournaledAssumeRoleAccess"
+    )
   end
 
   class KinesisTemporaryFailure < NotTrulyExceptionalError
