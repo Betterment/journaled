@@ -4,6 +4,7 @@ RSpec.describe Journaled::Delivery do
   let(:stream_name) { 'test_events' }
   let(:partition_key) { 'fake_partition_key' }
   let(:serialized_event) { '{"foo":"bar"}' }
+  let(:kinesis_client) { Aws::Kinesis::Client.new(stub_responses: true) }
 
   around do |example|
     with_env(JOURNALED_STREAM_NAME: stream_name) { example.run }
@@ -12,29 +13,60 @@ RSpec.describe Journaled::Delivery do
   subject { described_class.new serialized_event: serialized_event, partition_key: partition_key, app_name: nil }
 
   describe '#perform' do
-    let!(:stubbed_request) do
-      stub_request(:post, 'https://kinesis.us-east-1.amazonaws.com').to_return(status: return_status_code, body: return_status_body)
-    end
-    let(:return_status_code) { 200 }
-    let(:return_status_body) { return_status_body_hash.to_json }
-    let(:return_status_body_hash) { { RecordId: '101' } }
-
-    let(:stubbed_body) do
-      {
-        'StreamName' => stream_name,
-        'Data' => Base64.encode64(serialized_event).strip,
-        'PartitionKey' => 'fake_partition_key'
-      }
-    end
+    let(:return_status_body) { { shard_id: '101', sequence_number: '101123' } }
+    let(:return_object) { instance_double Aws::Kinesis::Types::PutRecordOutput, return_status_body }
 
     before do
+      allow(Aws::AssumeRoleCredentials).to receive(:new).and_call_original
+      allow(Aws::Kinesis::Client).to receive(:new).and_return kinesis_client
+      kinesis_client.stub_responses(:put_record, return_status_body)
+
       allow(Journaled).to receive(:enabled?).and_return(true)
     end
 
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-      subject.perform
+      event = subject.perform
 
-      expect(stubbed_request.with(body: stubbed_body.to_json)).to have_been_requested.once
+      expect(event.shard_id).to eq '101'
+      expect(event.sequence_number).to eq '101123'
+    end
+
+    context 'when JOURNALED_IAM_ROLE_NAME is defined' do
+      let(:aws_sts_client) { Aws::STS::Client.new(stub_responses: true) }
+
+      around do |example|
+        with_env(JOURNALED_IAM_ROLE_NAME: 'iam-role-arn-for-assuming-kinesis-access') { example.run }
+      end
+
+      before do
+        allow(Aws::STS::Client).to receive(:new).and_return aws_sts_client
+        aws_sts_client.stub_responses(:assume_role, assume_role_response)
+      end
+
+      let(:assume_role_response) do
+        {
+          assumed_role_user: {
+            arn: 'iam-role-arn-for-assuming-kinesis-access',
+            assumed_role_id: "ARO123EXAMPLE123:Bob"
+          },
+          credentials: {
+            access_key_id: "AKIAIOSFODNN7EXAMPLE",
+            secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY",
+            session_token: "EXAMPLEtc764bNrC9SAPBSM22wDOk4x4HIZ8j4FZTwdQWLWsKWHGBuFqwAeMicRXmxfpSPfIeoIYRqTflfKD8YUuwthAx7mSEI",
+            expiration: Time.zone.parse("2011-07-15T23:28:33.359Z")
+          }
+        }
+      end
+
+      it 'initializes a Kinesis client with assume role credentials' do
+        subject.perform
+
+        expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
+          client: aws_sts_client,
+          role_arn: "iam-role-arn-for-assuming-kinesis-access",
+          role_session_name: "JournaledAssumeRoleAccess"
+        )
+      end
     end
 
     context 'when the stream name env var is NOT set' do
@@ -46,57 +78,58 @@ RSpec.describe Journaled::Delivery do
     end
 
     context 'when Amazon responds with an InternalFailure' do
-      let(:return_status_code) { 500 }
-      let(:return_status_body_hash) { { __type: 'InternalFailure' } }
+      before do
+        kinesis_client.stub_responses(:put_record, 'InternalFailure')
+      end
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         expect(Rails.logger).to receive(:error).with("Kinesis Error - Server Error occurred - Aws::Kinesis::Errors::InternalFailure").once
         expect { subject.perform }.to raise_error described_class::KinesisTemporaryFailure
-        expect(stubbed_request).to have_been_requested.once
       end
     end
 
     context 'when Amazon responds with a ServiceUnavailable' do
-      let(:return_status_code) { 503 }
-      let(:return_status_body_hash) { { __type: 'ServiceUnavailable' } }
+      before do
+        kinesis_client.stub_responses(:put_record, 'ServiceUnavailable')
+      end
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
         expect { subject.perform }.to raise_error described_class::KinesisTemporaryFailure
-        expect(stubbed_request).to have_been_requested.once
         expect(Rails.logger).to have_received(:error).with(/\AKinesis Error/).once
       end
     end
 
     context 'when we receive a 504 Gateway timeout' do
-      let(:return_status_code) { 504 }
-      let(:return_status_body) { nil }
+      before do
+        kinesis_client.stub_responses(:put_record, 'Aws::Kinesis::Errors::ServiceError')
+      end
 
       it 'raises an error that subclasses Aws::Kinesis::Errors::ServiceError' do
         expect { subject.perform }.to raise_error Aws::Kinesis::Errors::ServiceError
-        expect(stubbed_request).to have_been_requested.once
       end
     end
 
     context 'when the IAM user does not have permission to put_record to the specified stream' do
-      let(:return_status_code) { 400 }
-      let(:return_status_body_hash) { { __type: 'AccessDeniedException' } }
+      before do
+        kinesis_client.stub_responses(:put_record, 'AccessDeniedException')
+      end
 
       it 'raises an AccessDeniedException error' do
         expect { subject.perform }.to raise_error Aws::Kinesis::Errors::AccessDeniedException
-        expect(stubbed_request).to have_been_requested.once
       end
     end
 
     context 'when the request timesout' do
-      let!(:stubbed_request) do
-        stub_request(:post, 'https://kinesis.us-east-1.amazonaws.com').to_timeout
+      before do
+        kinesis_client.stub_responses(:put_record, Seahorse::Client::NetworkingError.new(Timeout::Error.new))
       end
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
-        expect(Rails.logger).to receive(:error).with("Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError").once
+        expect(Rails.logger).to receive(:error).with(
+          "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError"
+        ).once
         expect { subject.perform }.to raise_error described_class::KinesisTemporaryFailure
-        expect(stubbed_request).to have_been_requested.once
       end
     end
   end

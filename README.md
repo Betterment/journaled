@@ -65,6 +65,12 @@ app's Gemfile.
     `AWS_DEFAULT_REGION`. If you don't specify, Journaled will default to
     `us-east-1`.
 
+    You may also specify a role that the Kinesis AWS client can assume:
+
+      * `JOURNALED_IAM_ROLE_NAME`
+
+    The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
+
 ## Usage
 
 ### Change Journaling
