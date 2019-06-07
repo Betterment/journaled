@@ -121,12 +121,12 @@ RSpec.describe Journaled::Delivery do
 
     context 'when the request timesout' do
       before do
-        kinesis_client.stub_responses(:put_record, 'Seahorse::Client::NetworkingError')
+        kinesis_client.stub_responses(:put_record, Seahorse::Client::NetworkingError.new(Timeout::Error.new))
       end
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         expect(Rails.logger).to receive(:error).with(
-          "Kinesis Error - Networking Error occurred - Aws::Kinesis::Errors::SeahorseClientNetworkingError"
+          "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError"
         ).once
         expect { subject.perform }.to raise_error described_class::KinesisTemporaryFailure
       end

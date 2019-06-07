@@ -12,7 +12,7 @@ class Journaled::Delivery
   rescue Aws::Kinesis::Errors::InternalFailure, Aws::Kinesis::Errors::ServiceUnavailable, Aws::Kinesis::Errors::Http503Error => e
     Rails.logger.error "Kinesis Error - Server Error occurred - #{e.class}"
     raise KinesisTemporaryFailure
-  rescue Aws::Kinesis::Errors::SeahorseClientNetworkingError => e
+  rescue Seahorse::Client::NetworkingError => e
     Rails.logger.error "Kinesis Error - Networking Error occurred - #{e.class}"
     raise KinesisTemporaryFailure
   end
