@@ -4,7 +4,6 @@ RSpec.describe Journaled::Delivery do
   let(:stream_name) { 'test_events' }
   let(:partition_key) { 'fake_partition_key' }
   let(:serialized_event) { '{"foo":"bar"}' }
-  let(:aws_sts_client) { Aws::STS::Client.new(stub_responses: true) }
   let(:kinesis_client) { Aws::Kinesis::Client.new(stub_responses: true) }
 
   around do |example|
@@ -33,6 +32,8 @@ RSpec.describe Journaled::Delivery do
     end
 
     context 'when JOURNALED_IAM_ROLE_NAME is defined' do
+      let(:aws_sts_client) { Aws::STS::Client.new(stub_responses: true) }
+
       around do |example|
         with_env(JOURNALED_IAM_ROLE_NAME: 'iam-role-arn-for-assuming-kinesis-access') { example.run }
       end
