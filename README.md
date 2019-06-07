@@ -69,7 +69,7 @@ app's Gemfile.
 
       * `JOURNALED_IAM_ROLE_NAME`
 
-    The actor whose credentials are in the environment will need to be allowed to assume this role.
+    The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
 ## Usage
 
