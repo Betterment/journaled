@@ -67,7 +67,7 @@ app's Gemfile.
 
     You may also specify a role that the Kinesis AWS client can assume:
 
-      * `JOURNALED_IAM_ROLE_NAME`
+      * `JOURNALED_IAM_ROLE_ARN`
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
