@@ -31,11 +31,11 @@ RSpec.describe Journaled::Delivery do
       expect(event.sequence_number).to eq '101123'
     end
 
-    context 'when JOURNALED_IAM_ROLE_NAME is defined' do
+    context 'when JOURNALED_IAM_ROLE_ARN is defined' do
       let(:aws_sts_client) { Aws::STS::Client.new(stub_responses: true) }
 
       around do |example|
-        with_env(JOURNALED_IAM_ROLE_NAME: 'iam-role-arn-for-assuming-kinesis-access') { example.run }
+        with_env(JOURNALED_IAM_ROLE_ARN: 'iam-role-arn-for-assuming-kinesis-access') { example.run }
       end
 
       before do
