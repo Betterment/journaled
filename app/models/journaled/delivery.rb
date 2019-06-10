@@ -1,6 +1,4 @@
 class Journaled::Delivery
-  DEFAULT_REGION = 'us-east-1'.freeze
-
   def initialize(serialized_event:, partition_key:, app_name:)
     @serialized_event = serialized_event
     @partition_key = partition_key
@@ -22,13 +20,6 @@ class Journaled::Delivery
     ENV.fetch(env_var_name)
   end
 
-  def kinesis_client_config
-    {
-      region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
-      retry_limit: 0
-    }.merge(credentials)
-  end
-
   private
 
   attr_reader :serialized_event, :partition_key, :app_name
@@ -42,36 +33,7 @@ class Journaled::Delivery
   end
 
   def kinesis_client
-    Aws::Kinesis::Client.new(kinesis_client_config)
-  end
-
-  def credentials
-    if ENV.key?('JOURNALED_IAM_ROLE_ARN')
-      {
-        credentials: iam_assume_role_credentials
-      }
-    else
-      legacy_credentials_hash_if_present
-    end
-  end
-
-  def legacy_credentials_hash_if_present
-    if ENV.key?('RUBY_AWS_ACCESS_KEY_ID')
-      {
-        access_key_id: ENV.fetch('RUBY_AWS_ACCESS_KEY_ID'),
-        secret_access_key: ENV.fetch('RUBY_AWS_SECRET_ACCESS_KEY')
-      }
-    else
-      {}
-    end
-  end
-
-  def iam_assume_role_credentials
-    @iam_assume_role_credentials ||= Aws::AssumeRoleCredentials.new(
-      client: Aws::STS::Client.new(legacy_credentials_hash_if_present),
-      role_arn: ENV.fetch('JOURNALED_IAM_ROLE_ARN'),
-      role_session_name: "JournaledAssumeRoleAccess"
-    )
+    @kinesis_client ||= Journaled::KinesisClient.new.client
   end
 
   class KinesisTemporaryFailure < NotTrulyExceptionalError
