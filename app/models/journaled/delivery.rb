@@ -23,18 +23,10 @@ class Journaled::Delivery
   end
 
   def kinesis_client_config
-    if ENV.key?('JOURNALED_IAM_ROLE_ARN')
-      {
-        credentials: iam_assume_role_credentials,
-        region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
-        retry_limit: 0
-      }
-    else
-      {
-        region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
-        retry_limit: 0
-      }.merge(legacy_credentials_hash_if_present)
-    end
+    {
+      region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
+      retry_limit: 0
+    }.merge(credentials)
   end
 
   private
@@ -51,6 +43,16 @@ class Journaled::Delivery
 
   def kinesis_client
     Aws::Kinesis::Client.new(kinesis_client_config)
+  end
+
+  def credentials
+    if ENV.key?('JOURNALED_IAM_ROLE_ARN')
+      {
+        credentials: iam_assume_role_credentials
+      }
+    else
+      legacy_credentials_hash_if_present
+    end
   end
 
   def legacy_credentials_hash_if_present
