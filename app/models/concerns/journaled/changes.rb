@@ -26,32 +26,34 @@ module Journaled::Changes
     end
   end
 
-  def delete(force: false)
-    if force || self.class.journaled_attribute_names.empty?
-      super()
-    else
-      raise(<<~ERROR)
-        #delete aborted by Journaled::Changes.
+  if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::MINOR >= 2)
+    def delete(force: false)
+      if force || self.class.journaled_attribute_names.empty?
+        super()
+      else
+        raise(<<~ERROR)
+          #delete aborted by Journaled::Changes.
 
-        Call #destroy instead to ensure journaling or invoke #delete(force: true)
-        to override and skip journaling.
-      ERROR
+          Call #destroy instead to ensure journaling or invoke #delete(force: true)
+          to override and skip journaling.
+        ERROR
+      end
     end
-  end
 
-  def update_columns(attributes, force: false)
-    unless force || self.class.journaled_attribute_names.empty?
-      conflicting_journaled_attribute_names = self.class.journaled_attribute_names & attributes.keys.map(&:to_sym)
-      raise(<<~ERROR) if conflicting_journaled_attribute_names.present?
-        #update_columns aborted by Journaled::Changes due to journaled attributes:
+    def update_columns(attributes, force: false)
+      unless force || self.class.journaled_attribute_names.empty?
+        conflicting_journaled_attribute_names = self.class.journaled_attribute_names & attributes.keys.map(&:to_sym)
+        raise(<<~ERROR) if conflicting_journaled_attribute_names.present?
+          #update_columns aborted by Journaled::Changes due to journaled attributes:
 
-          #{conflicting_journaled_attribute_names.join(', ')}
+            #{conflicting_journaled_attribute_names.join(', ')}
 
-        Call #update instead to ensure journaling or invoke #update_columns
-        with additional arg `{ force: true }` to override and skip journaling.
-      ERROR
+          Call #update instead to ensure journaling or invoke #update_columns
+          with additional arg `{ force: true }` to override and skip journaling.
+        ERROR
+      end
+      super(attributes)
     end
-    super(attributes)
   end
 
   class_methods do
@@ -66,16 +68,18 @@ module Journaled::Changes
       journaled_attribute_names.concat(attribute_names)
     end
 
-    def delete(id_or_array, force: false)
-      if force || journaled_attribute_names.empty?
-        where(primary_key => id_or_array).delete_all(force: true)
-      else
-        raise(<<~ERROR)
-          .delete aborted by Journaled::Changes.
+    if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::MINOR >= 2)
+      def delete(id_or_array, force: false)
+        if force || journaled_attribute_names.empty?
+          where(primary_key => id_or_array).delete_all(force: true)
+        else
+          raise(<<~ERROR)
+            .delete aborted by Journaled::Changes.
 
-          Call .destroy(id_or_array) instead to ensure journaling or invoke
-          .delete(id_or_array, force: true) to override and skip journaling.
-        ERROR
+            Call .destroy(id_or_array) instead to ensure journaling or invoke
+            .delete(id_or_array, force: true) to override and skip journaling.
+          ERROR
+        end
       end
     end
   end
