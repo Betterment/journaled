@@ -90,6 +90,7 @@ RSpec.describe "Raw database change protection" do
     describe "#delete" do
       it "refuses if journaled columns exist" do
         expect { subject.delete }.to raise_error(/aborted by Journaled/)
+        expect { subject.destroy! }.not_to raise_error
       end
 
       it "succeeds if no journaled columns exist" do
