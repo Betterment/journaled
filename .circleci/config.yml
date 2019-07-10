@@ -4,7 +4,7 @@ jobs:
   started:
     resource_class: small
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:1
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:v1.x
     working_directory: "~/journaled"
     steps:
     - run:
@@ -17,7 +17,7 @@ jobs:
   completed:
     resource_class: small
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:1
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/coach-notifier/generic:v1.x
     working_directory: "~/journaled"
     steps:
     - run:
@@ -32,7 +32,7 @@ jobs:
     environment:
       BUNDLE_GEMFILE: Gemfile
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:2
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:v2.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
@@ -83,6 +83,62 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+  journaled--lint (Gemfile.next):
+    resource_class: small
+    environment:
+      BUNDLE_GEMFILE: Gemfile.next
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:v2.x
+      environment:
+        GEM_SOURCE: https://rubygems.org
+        RAILS_ENV: test
+        RACK_ENV: test
+    working_directory: "~/journaled"
+    steps:
+    - run:
+        name: Generate git refs cache key
+        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
+    - restore_cache:
+        keys:
+        - v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+        - v2-git-refs-
+    - run:
+        name: Checkout code
+        command: checkout
+    - save_cache:
+        paths: ".git"
+        key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - restore_cache:
+        keys:
+        - v0-journaled-2.4.2-Gemfile.next-{{ checksum "./coach.yml" }}-{{ checksum
+          "./Gemfile.next" }}-{{ checksum "./journaled.gemspec" }}
+        - v0-journaled-2.4.2-Gemfile.next-
+    - run:
+        name: bundle install dependencies
+        command: |
+          cd .
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+    - save_cache:
+        paths:
+        - "./vendor/bundle"
+        key: v0-journaled-2.4.2-Gemfile.next-{{ checksum "./coach.yml" }}-{{ checksum
+          "./Gemfile.next" }}-{{ checksum "./journaled.gemspec" }}
+    - run:
+        name: run rubocop
+        command: |
+          cd .
+          mkdir -p /tmp/artifacts
+          bundle exec rubocop --format progress \
+                              --format html \
+                              --out /tmp/artifacts/rubocop-report.html
+    - store_artifacts:
+        path: "/tmp/artifacts"
+        destination: artifacts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
   journaled--test (Gemfile):
     resource_class: small
     environment:
@@ -90,12 +146,12 @@ jobs:
       EAGER_LOAD: true
     parallelism: 1
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:2
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:v2.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
         RACK_ENV: test
-    - image: circleci/postgres:9.4
+    - image: circleci/postgres:9.6
       command: postgres --max_prepared_transactions=100
       environment:
         POSTGRES_USER: betterment
@@ -186,6 +242,109 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+  journaled--test (Gemfile.next):
+    resource_class: small
+    environment:
+      BUNDLE_GEMFILE: Gemfile.next
+      EAGER_LOAD: true
+    parallelism: 1
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.4.2:v2.x
+      environment:
+        GEM_SOURCE: https://rubygems.org
+        RAILS_ENV: test
+        RACK_ENV: test
+    - image: circleci/postgres:9.6
+      command: postgres --max_prepared_transactions=100
+      environment:
+        POSTGRES_USER: betterment
+    working_directory: "~/journaled"
+    steps:
+    - run:
+        name: Generate git refs cache key
+        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
+    - restore_cache:
+        keys:
+        - v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+        - v2-git-refs-
+    - run:
+        name: Checkout code
+        command: checkout
+    - save_cache:
+        paths: ".git"
+        key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - restore_cache:
+        keys:
+        - v0-journaled-2.4.2-Gemfile.next-{{ checksum "./coach.yml" }}-{{ checksum
+          "./Gemfile.next" }}-{{ checksum "./journaled.gemspec" }}
+        - v0-journaled-2.4.2-Gemfile.next-
+    - run:
+        name: bundle install dependencies
+        command: |
+          cd .
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+    - save_cache:
+        paths:
+        - "./vendor/bundle"
+        key: v0-journaled-2.4.2-Gemfile.next-{{ checksum "./coach.yml" }}-{{ checksum
+          "./Gemfile.next" }}-{{ checksum "./journaled.gemspec" }}
+    - run:
+        name: wait for postgresql db
+        command: dockerize -wait tcp://localhost:5432 -timeout 1m
+    - run:
+        name: setup database
+        command: |
+          cd .
+          bundle exec rake db:test:prepare
+    - run:
+        name: run rspec tests
+        command: |
+          cd .
+          mkdir -p /tmp/artifacts
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          echo "RSpec file pattern: $TEST_FILES"
+          bundle exec rspec --format progress \
+                            --format RspecJunitFormatter \
+                            --out /tmp/artifacts/rspec.xml \
+                            -- \
+                            $TEST_FILES
+    - run:
+        name: save screenshots
+        command: |
+          cd .
+          if [ -d spec/error_screenshots ]; then
+            mv spec/error_screenshots /tmp/artifacts
+          fi
+          if [ -d tmp/screenshots ]; then
+            mv tmp/screenshots /tmp/artifacts
+          fi
+        when: always
+    - run:
+        name: save rspec example persistence file
+        command: |
+          cd .
+          if [ -f spec/examples.txt ]; then
+            mv spec/examples.txt /tmp/artifacts
+          fi
+        when: always
+    - run:
+        name: save test logs
+        command: |
+          cd .
+          if [ -f log/test.log ]; then
+            mv log/test.log /tmp/artifacts
+          fi
+        when: always
+    - store_test_results:
+        path: "/tmp/artifacts"
+    - store_artifacts:
+        path: "/tmp/artifacts"
+        destination: artifacts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
 workflows:
   version: 2
   all:
@@ -203,8 +362,17 @@ workflows:
         requires:
         - started
         - journaled--lint (Gemfile)
+        - journaled--lint (Gemfile.next)
         - journaled--test (Gemfile)
+        - journaled--test (Gemfile.next)
     - journaled--lint (Gemfile):
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+        requires:
+        - started
+    - journaled--lint (Gemfile.next):
         context: org-global
         filters:
           branches:
@@ -218,4 +386,11 @@ workflows:
             ignore: "/^deploy-attempts-.*/"
         requires:
         - started
-coach_version: 0.18.10
+    - journaled--test (Gemfile.next):
+        context: org-global
+        filters:
+          branches:
+            ignore: "/^deploy-attempts-.*/"
+        requires:
+        - started
+coach_version: 0.20.6
