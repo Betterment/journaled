@@ -26,7 +26,7 @@ class Journaled::Delivery
     {
       region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
       retry_limit: 0
-    }.merge(legacy_credentials_hash)
+    }.merge(credentials)
   end
 
   private
@@ -42,10 +42,20 @@ class Journaled::Delivery
   end
 
   def kinesis_client
-    @kinesis_client ||= Aws::Kinesis::Client.new(kinesis_client_config)
+    Aws::Kinesis::Client.new(kinesis_client_config)
   end
 
-  def legacy_credentials_hash
+  def credentials
+    if ENV.key?('JOURNALED_IAM_ROLE_ARN')
+      {
+        credentials: iam_assume_role_credentials
+      }
+    else
+      legacy_credentials_hash_if_present
+    end
+  end
+
+  def legacy_credentials_hash_if_present
     if ENV.key?('RUBY_AWS_ACCESS_KEY_ID')
       {
         access_key_id: ENV.fetch('RUBY_AWS_ACCESS_KEY_ID'),
@@ -54,6 +64,20 @@ class Journaled::Delivery
     else
       {}
     end
+  end
+
+  def sts_client
+    Aws::STS::Client.new({
+      region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION)
+    }.merge(legacy_credentials_hash_if_present))
+  end
+
+  def iam_assume_role_credentials
+    @iam_assume_role_credentials ||= Aws::AssumeRoleCredentials.new(
+      client: sts_client,
+      role_arn: ENV.fetch('JOURNALED_IAM_ROLE_ARN'),
+      role_session_name: "JournaledAssumeRoleAccess"
+    )
   end
 
   class KinesisTemporaryFailure < NotTrulyExceptionalError

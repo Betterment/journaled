@@ -2,5 +2,8 @@ project_type: ruby_gem
 ruby_version: 2.4.2
 resource_class: small
 databases:
-  postgresql:
-    version: 9.4
+  - type: postgresql
+    version: 9.6
+test_gemfiles:
+  - Gemfile
+  - Gemfile.next
