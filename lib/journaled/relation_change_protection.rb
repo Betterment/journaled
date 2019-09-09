@@ -1,5 +1,5 @@
 module Journaled::RelationChangeProtection
-  def update_all(updates, force: false)
+  def update_all(updates, force: false) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize, Metrics/PerceivedComplexity
     unless force || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?
       conflicting_journaled_attribute_names = if updates.is_a?(Hash)
                                                 @klass.journaled_attribute_names & updates.keys.map(&:to_sym)
