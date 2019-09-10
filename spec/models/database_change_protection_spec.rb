@@ -26,6 +26,7 @@ if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::M
         it "refuses on journaled columns passed as string" do
           expect { journaled_class.update_all("\"locked_at\" = NULL") }.to raise_error(/aborted by Journaled/)
           expect { journaled_class.update_all("locked_at = null") }.to raise_error(/aborted by Journaled/)
+          expect { journaled_class.update_all("delayed_jobs.locked_at = null") }.to raise_error(/aborted by Journaled/)
           expect { journaled_class.update_all("last_error = 'locked_at'") }.not_to raise_error
         end
 
