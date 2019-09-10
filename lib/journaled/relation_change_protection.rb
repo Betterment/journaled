@@ -5,7 +5,7 @@ module Journaled::RelationChangeProtection
                                                 @klass.journaled_attribute_names & updates.keys.map(&:to_sym)
                                               elsif updates.is_a?(String)
                                                 @klass.journaled_attribute_names.select do |a|
-                                                  updates.match?(/(^|\A|[ \.\\\"])#{a}[\z \\\"]/)
+                                                  updates.match?(/(^|\A|[ \.\"])#{a}[\z \"$]/)
                                                 end
                                               else
                                                 raise "unsupported type '#{updates.class}' for 'updates'"
