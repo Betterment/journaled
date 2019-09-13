@@ -5,5 +5,6 @@ databases:
   - type: postgresql
     version: 9.6
 test_gemfiles:
-  - Gemfile
-  - Gemfile.next
+  - gemfiles/rails_5_1.gemfile
+  - gemfiles/rails_5_2.gemfile
+  - gemfiles/rails_6_0.gemfile
