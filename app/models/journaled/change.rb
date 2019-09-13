@@ -16,7 +16,7 @@ class Journaled::Change
     :changes,
     :actor
 
-  def initialize(table_name:, # rubocop:disable Metrics/ParameterLists
+  def initialize(table_name:,
                  record_id:,
                  database_operation:,
                  logical_operation:,

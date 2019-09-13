@@ -12,7 +12,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
         some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
         some_int: some_int_value,
         some_optional_string: some_optional_string_value,
-        some_nullable_field: some_nullable_field
+        some_nullable_field: some_nullable_field,
       }
     end
     let(:some_int_value) { 3 }
@@ -77,7 +77,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
               some_decimal: 0.1.to_d,
               some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
               some_int: some_int_value,
-              some_nullable_field: some_nullable_field
+              some_nullable_field: some_nullable_field,
             }
           end
 
@@ -108,7 +108,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
           {
             some_string: some_string_value,
             some_decimal: 0.1.to_d,
-            some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00')
+            some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
           }
         end
 

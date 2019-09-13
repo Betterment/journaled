@@ -18,7 +18,7 @@ RSpec.describe Journaled::Writer do
           journaled_schema_name: nil,
           journaled_attributes: {},
           journaled_partition_key: '',
-          journaled_app_name: nil
+          journaled_app_name: nil,
         )
       end
 
@@ -33,12 +33,12 @@ RSpec.describe Journaled::Writer do
           journaled_schema_name: :fake_schema_name,
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
-          journaled_app_name: nil
+          journaled_app_name: nil,
         )
       end
 
       it 'does not raise on initialization' do
-        expect { subject }.to_not raise_error
+        expect { subject }.not_to raise_error
       end
     end
   end
@@ -72,7 +72,7 @@ RSpec.describe Journaled::Writer do
         journaled_schema_name: :fake_schema_name,
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
-        journaled_app_name: 'my_app'
+        journaled_app_name: 'my_app',
       )
     end
 

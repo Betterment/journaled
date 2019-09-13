@@ -1,7 +1,6 @@
 .bundle/
 .idea/
 Gemfile.lock
-Gemfile.next.lock
 log/*.log
 pkg/
 spec/dummy/log/*.log

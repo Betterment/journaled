@@ -39,7 +39,7 @@ class Journaled::Writer
     @journaled_delivery ||= Journaled::Delivery.new(
       serialized_event: serialized_event,
       partition_key: journaled_partition_key,
-      app_name: journaled_app_name
+      app_name: journaled_app_name,
     )
   end
 

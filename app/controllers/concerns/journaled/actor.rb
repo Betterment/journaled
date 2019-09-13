@@ -12,6 +12,7 @@ module Journaled::Actor
   class_methods do
     def journaled_actor=(method_name)
       raise "Must provide a symbol method name" unless method_name.is_a?(Symbol)
+
       self._journaled_actor_method_name = method_name
     end
   end

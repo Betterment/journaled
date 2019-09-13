@@ -29,7 +29,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "pry-rails"
   s.add_development_dependency "rspec-rails"
   s.add_development_dependency "rspec_junit_formatter"
-  s.add_development_dependency "rubocop-betterment", "1.3.0"
+  s.add_development_dependency "rubocop-betterment", "~> 1.3"
   s.add_development_dependency "spring"
   s.add_development_dependency "spring-commands-rspec"
   s.add_development_dependency "timecop"
