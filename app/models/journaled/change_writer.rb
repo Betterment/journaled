@@ -28,7 +28,7 @@ class Journaled::ChangeWriter
       logical_operation: logical_operation,
       changes: JSON.dump(changes),
       journaled_app_name: journaled_app_name,
-      actor: actor_uri
+      actor: actor_uri,
     )
   end
 

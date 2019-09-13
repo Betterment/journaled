@@ -11,12 +11,12 @@ RSpec.describe Journaled::ChangeWriter do
         "name" => "bob",
         "rank" => "first lieutenant",
         "serial_number" => "foobar",
-        "last_sign_in_at" => now
+        "last_sign_in_at" => now,
       },
       saved_changes: {
         "name" => %w(bill bob),
-        "last_sign_in_at" => now
-      }
+        "last_sign_in_at" => now,
+      },
     )
   end
 
@@ -24,21 +24,21 @@ RSpec.describe Journaled::ChangeWriter do
     double(
       "SoldierClass",
       table_name: "soldiers",
-      attribute_names: %w(id name rank serial_number last_sign_in_at)
+      attribute_names: %w(id name rank serial_number last_sign_in_at),
     )
   end
 
   let(:change_definition) do
     Journaled::ChangeDefinition.new(
       attribute_names: %i(name rank serial_number),
-      logical_operation: "identity_change"
+      logical_operation: "identity_change",
     )
   end
 
   let(:faulty_change_definition) do
     Journaled::ChangeDefinition.new(
       attribute_names: %i(name rank serial_number nonexistent_thingie),
-      logical_operation: "identity_change"
+      logical_operation: "identity_change",
     )
   end
 
@@ -58,9 +58,9 @@ RSpec.describe Journaled::ChangeWriter do
           "name" => "bill",
           "rank" => "first lieutenant",
           "serial_number" => "foobar",
-          "last_sign_in_at" => Time.zone.now
+          "last_sign_in_at" => Time.zone.now,
         },
-        saved_changes: {}
+        saved_changes: {},
       )
     end
 
@@ -68,7 +68,7 @@ RSpec.describe Journaled::ChangeWriter do
       expect(subject.relevant_attributes).to eq(
         "name" => "bill",
         "rank" => "first lieutenant",
-        "serial_number" => "foobar"
+        "serial_number" => "foobar",
       )
     end
   end
@@ -83,11 +83,11 @@ RSpec.describe Journaled::ChangeWriter do
           "name" => "bill",
           "rank" => "first lieutenant",
           "serial_number" => "foobar",
-          "last_sign_in_at" => Time.zone.now
+          "last_sign_in_at" => Time.zone.now,
         },
         changes: {
-          "name" => %w(bob bill)
-        }
+          "name" => %w(bob bill),
+        },
       )
     end
 
@@ -95,7 +95,7 @@ RSpec.describe Journaled::ChangeWriter do
       expect(subject.relevant_unperturbed_attributes).to eq(
         "name" => "bob",
         "rank" => "first lieutenant",
-        "serial_number" => "foobar"
+        "serial_number" => "foobar",
       )
     end
   end
@@ -180,9 +180,9 @@ RSpec.describe Journaled::ChangeWriter do
             "name" => "bill",
             "rank" => "first lieutenant",
             "serial_number" => "foobar",
-            "last_sign_in_at" => Time.zone.now
+            "last_sign_in_at" => Time.zone.now,
           },
-          saved_changes: {}
+          saved_changes: {},
         )
       end
 
@@ -222,9 +222,9 @@ RSpec.describe Journaled::ChangeWriter do
               "name" => "bill",
               "rank" => "first lieutenant",
               "serial_number" => "foobar",
-              "last_sign_in_at" => Time.zone.now
+              "last_sign_in_at" => Time.zone.now,
             },
-            saved_changes: {}
+            saved_changes: {},
           )
         end
 
@@ -248,11 +248,11 @@ RSpec.describe Journaled::ChangeWriter do
             "name" => "bob",
             "rank" => "first lieutenant",
             "serial_number" => "foobar",
-            "last_sign_in_at" => now
+            "last_sign_in_at" => now,
           },
           changes: {
-            "name" => %w(bill bob)
-          }
+            "name" => %w(bill bob),
+          },
         )
       end
 
@@ -261,7 +261,7 @@ RSpec.describe Journaled::ChangeWriter do
           expect(JSON.parse(opts[:changes])).to eq(
             "name" => "bill",
             "rank" => "first lieutenant",
-            "serial_number" => "foobar"
+            "serial_number" => "foobar",
           )
           journaled_change
         end

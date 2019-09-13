@@ -145,7 +145,7 @@ RSpec.describe Journaled::Event do
           created_at: frozen_time,
           event_type: 'some_class_name',
           foo: 'foo_return',
-          bar: 'bar_return'
+          bar: 'bar_return',
         )
       end
     end

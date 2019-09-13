@@ -47,14 +47,14 @@ RSpec.describe Journaled::Delivery do
         {
           assumed_role_user: {
             arn: 'iam-role-arn-for-assuming-kinesis-access',
-            assumed_role_id: "ARO123EXAMPLE123:Bob"
+            assumed_role_id: "ARO123EXAMPLE123:Bob",
           },
           credentials: {
             access_key_id: "AKIAIOSFODNN7EXAMPLE",
             secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY",
             session_token: "EXAMPLEtc764bNrC9SAPBSM22wDOk4x4HIZ8j4FZTwdQWLWsKWHGBuFqwAeMicRXmxfpSPfIeoIYRqTflfKD8YUuwthAx7mSEI",
-            expiration: Time.zone.parse("2011-07-15T23:28:33.359Z")
-          }
+            expiration: Time.zone.parse("2011-07-15T23:28:33.359Z"),
+          },
         }
       end
 
@@ -64,7 +64,7 @@ RSpec.describe Journaled::Delivery do
         expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
           client: aws_sts_client,
           role_arn: "iam-role-arn-for-assuming-kinesis-access",
-          role_session_name: "JournaledAssumeRoleAccess"
+          role_session_name: "JournaledAssumeRoleAccess",
         )
       end
     end
@@ -127,7 +127,7 @@ RSpec.describe Journaled::Delivery do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         expect(Rails.logger).to receive(:error).with(
-          "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError"
+          "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError",
         ).once
         expect { subject.perform }.to raise_error described_class::KinesisTemporaryFailure
       end
