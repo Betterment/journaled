@@ -9,4 +9,3 @@ AllCops:
   Exclude:
     - 'spec/dummy/db/**/*'
     - 'vendor/**/*'
-    - 'gemfiles/vendor/**/*'

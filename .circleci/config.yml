@@ -67,8 +67,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -130,8 +130,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -193,8 +193,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -257,8 +257,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -278,11 +278,11 @@ jobs:
         command: |
           cd .
           mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec.xml \
+                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -316,7 +316,7 @@ jobs:
         path: "/tmp/artifacts"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -366,8 +366,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -387,11 +387,11 @@ jobs:
         command: |
           cd .
           mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec.xml \
+                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -425,7 +425,7 @@ jobs:
         path: "/tmp/artifacts"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -475,8 +475,8 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+          bundle check --path $(pwd)/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
     - save_cache:
         paths:
         - "./vendor/bundle"
@@ -496,11 +496,11 @@ jobs:
         command: |
           cd .
           mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec.xml \
+                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -534,7 +534,7 @@ jobs:
         path: "/tmp/artifacts"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -583,4 +583,4 @@ workflows:
         context: org-global
         requires:
         - started
-coach_version: 0.20.31
+coach_version: 0.21.6
