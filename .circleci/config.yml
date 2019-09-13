@@ -59,20 +59,20 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -122,20 +122,20 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -185,20 +185,20 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -249,20 +249,20 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -358,20 +358,20 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -467,20 +467,20 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
+        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
     - run:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path gemfiles/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v2-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        key: v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
