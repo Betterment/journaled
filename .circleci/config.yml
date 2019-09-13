@@ -67,11 +67,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -130,11 +130,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -193,11 +193,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -257,11 +257,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -366,11 +366,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -475,11 +475,11 @@ jobs:
         name: bundle install dependencies
         command: |
           cd .
-          bundle check --path $(pwd)/vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path $(pwd)/vendor/bundle
+          bundle check --path gemfiles/vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path gemfiles/vendor/bundle
     - save_cache:
         paths:
-        - "./vendor/bundle"
+        - "./gemfiles/vendor/bundle"
         key: v1-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
@@ -583,4 +583,4 @@ workflows:
         context: org-global
         requires:
         - started
-coach_version: 0.21.6
+coach_version: 0.21.7
