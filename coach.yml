@@ -1,7 +1,7 @@
 project_type: ruby_gem
 ruby_version: 2.6.1
 resource_class: small
-cache_sequence: 1
+cache_sequence: 2
 databases:
   - type: postgresql
     version: 9.6
