@@ -1,10 +1,13 @@
 class Journaled::Delivery
   DEFAULT_REGION = 'us-east-1'.freeze
 
-  def initialize(serialized_event:, partition_key:, app_name:)
+  attr_reader :priority
+
+  def initialize(serialized_event:, partition_key:, app_name:, priority: nil)
     @serialized_event = serialized_event
     @partition_key = partition_key
     @app_name = app_name
+    @priority = priority
   end
 
   def perform
