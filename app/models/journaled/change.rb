@@ -7,6 +7,7 @@ class Journaled::Change
     :logical_operation,
     :changes,
     :journaled_app_name,
+    :journaled_enqueue_opts,
     :actor
 
   journal_attributes :table_name,
@@ -22,6 +23,7 @@ class Journaled::Change
                  logical_operation:,
                  changes:,
                  journaled_app_name:,
+                 journaled_enqueue_opts:,
                  actor:)
     @table_name = table_name
     @record_id = record_id
@@ -29,6 +31,7 @@ class Journaled::Change
     @logical_operation = logical_operation
     @changes = changes
     @journaled_app_name = journaled_app_name
+    @journaled_enqueue_opts = journaled_enqueue_opts
     @actor = actor
   end
 end

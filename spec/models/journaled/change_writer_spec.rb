@@ -17,6 +17,7 @@ RSpec.describe Journaled::ChangeWriter do
         "name" => %w(bill bob),
         "last_sign_in_at" => now,
       },
+      journaled_enqueue_opts: {},
     )
   end
 
@@ -61,6 +62,7 @@ RSpec.describe Journaled::ChangeWriter do
           "last_sign_in_at" => Time.zone.now,
         },
         saved_changes: {},
+        journaled_enqueue_opts: {},
       )
     end
 
@@ -88,6 +90,7 @@ RSpec.describe Journaled::ChangeWriter do
         changes: {
           "name" => %w(bob bill),
         },
+        journaled_enqueue_opts: {},
       )
     end
 
@@ -183,6 +186,7 @@ RSpec.describe Journaled::ChangeWriter do
             "last_sign_in_at" => Time.zone.now,
           },
           saved_changes: {},
+          journaled_enqueue_opts: {},
         )
       end
 
@@ -253,6 +257,7 @@ RSpec.describe Journaled::ChangeWriter do
           changes: {
             "name" => %w(bill bob),
           },
+          journaled_enqueue_opts: {},
         )
       end
 

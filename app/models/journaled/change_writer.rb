@@ -28,6 +28,7 @@ class Journaled::ChangeWriter
       logical_operation: logical_operation,
       changes: JSON.dump(changes),
       journaled_app_name: journaled_app_name,
+      journaled_enqueue_opts: model.journaled_enqueue_opts,
       actor: actor_uri,
     )
   end
