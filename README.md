@@ -107,7 +107,7 @@ at the model level:
 journal_changes_to :email, as: :identity_change, priority: 10
 
 # Or for custom journaling:
-journal_attributes :email, priority: 20
+journal_attributes :email, priority: 20, queue: 'journaled'
 ```
 
 These options will be passed into whatever block is configured via (`on_enqueue`), including
