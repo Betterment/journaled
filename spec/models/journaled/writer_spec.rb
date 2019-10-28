@@ -113,6 +113,21 @@ RSpec.describe Journaled::Writer do
             Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 20).count
           }.from(0).to(1)
         end
+
+        context 'when there is an app job priority is set' do
+          around do |example|
+            orig_priority = Journaled.job_priority
+            Journaled.job_priority = 13
+            example.run
+            Journaled.job_priority = orig_priority
+          end
+
+          it 'enqueues a Journaled::Delivery object with the given priority' do
+            expect { subject.journal! }.to change {
+              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 13).count
+            }.from(0).to(1)
+          end
+        end
       end
     end
   end
