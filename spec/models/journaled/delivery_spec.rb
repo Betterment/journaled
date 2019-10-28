@@ -12,22 +12,6 @@ RSpec.describe Journaled::Delivery do
 
   subject { described_class.new serialized_event: serialized_event, partition_key: partition_key, app_name: nil }
 
-  describe '#priority' do
-    it 'defaults to nil' do
-      expect(subject.priority).to be_nil
-    end
-
-    context 'when a priority is provided' do
-      subject { described_class.new serialized_event: serialized_event, partition_key: partition_key, app_name: nil, priority: priority }
-
-      let(:priority) { 'utmost' }
-
-      it 'returns the priority' do
-        expect(subject.priority).to eq 'utmost'
-      end
-    end
-  end
-
   describe '#perform' do
     let(:return_status_body) { { shard_id: '101', sequence_number: '101123' } }
     let(:return_object) { instance_double Aws::Kinesis::Types::PutRecordOutput, return_status_body }

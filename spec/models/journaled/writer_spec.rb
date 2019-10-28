@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Writer do
-  subject { described_class.new journaled_event: journaled_event, priority: Journaled::JobPriority::EVENTUAL }
+  subject { described_class.new journaled_event: journaled_event }
 
   describe '#initialize' do
     context 'when the Journaled Event does not implement all the necessary methods' do
@@ -110,18 +110,8 @@ RSpec.describe Journaled::Writer do
 
         it 'enqueues a Journaled::Delivery object with the serialized journaled_event at the lowest priority' do
           expect { subject.journal! }.to change {
-            Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: Journaled::JobPriority::EVENTUAL).count
+            Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 20).count
           }.from(0).to(1)
-        end
-
-        context 'when the Writer was initialized with a priority' do
-          subject { described_class.new journaled_event: journaled_event, priority: Journaled::JobPriority::INTERACTIVE }
-
-          it 'enqueues the event at the given priority' do
-            expect { subject.journal! }.to change {
-              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: Journaled::JobPriority::INTERACTIVE).count
-            }.from(0).to(1)
-          end
         end
       end
     end

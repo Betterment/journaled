@@ -4,11 +4,10 @@ require "json-schema"
 require "request_store"
 
 require "journaled/engine"
-require "journaled/job_priority"
 
 module Journaled
   mattr_accessor :default_app_name
-  mattr_accessor(:job_priority) { Journaled::JobPriority::EVENTUAL }
+  mattr_accessor(:job_priority) { 20 }
 
   def development_or_test?
     %w(development test).include?(Rails.env)

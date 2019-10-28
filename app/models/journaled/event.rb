@@ -2,7 +2,7 @@ module Journaled::Event
   extend ActiveSupport::Concern
 
   def journal!
-    Journaled::Writer.new(journaled_event: self, priority: Journaled.job_priority).journal!
+    Journaled::Writer.new(journaled_event: self).journal!
   end
 
   # Base attributes

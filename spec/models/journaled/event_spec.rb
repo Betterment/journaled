@@ -25,22 +25,7 @@ RSpec.describe Journaled::Event do
       it 'creates a Journaled::Writer with this event and journals it with the default priority' do
         sample_journaled_event.journal!
         expect(Journaled::Writer).to have_received(:new)
-          .with(journaled_event: sample_journaled_event, priority: Journaled::JobPriority::EVENTUAL)
-        expect(mock_journaled_writer).to have_received(:journal!)
-      end
-    end
-
-    context 'when there is an app job priority is set' do
-      around do |example|
-        orig_priority = Journaled.job_priority
-        Journaled.job_priority = 13
-        example.run
-        Journaled.job_priority = orig_priority
-      end
-
-      it 'creates a Journaled::Writer with this event and journals it with the given priority' do
-        sample_journaled_event.journal!
-        expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: 13)
+          .with(journaled_event: sample_journaled_event)
         expect(mock_journaled_writer).to have_received(:journal!)
       end
     end

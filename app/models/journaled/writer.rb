@@ -6,7 +6,7 @@ class Journaled::Writer
     journaled_app_name
   ).freeze
 
-  def initialize(journaled_event:, priority:)
+  def initialize(journaled_event:)
     raise "An enqueued event must respond to: #{EVENT_METHOD_NAMES.to_sentence}" unless respond_to_all?(journaled_event, EVENT_METHOD_NAMES)
 
     unless journaled_event.journaled_schema_name.present? &&
@@ -21,18 +21,17 @@ class Journaled::Writer
     end
 
     @journaled_event = journaled_event
-    @priority = priority
   end
 
   def journal!
     base_event_json_schema_validator.validate! serialized_event
     json_schema_validator.validate! serialized_event
-    Delayed::Job.enqueue journaled_delivery, priority: journaled_delivery.priority
+    Delayed::Job.enqueue journaled_delivery, priority: Journaled.job_priority
   end
 
   private
 
-  attr_reader :journaled_event, :priority
+  attr_reader :journaled_event
   delegate :journaled_schema_name, :journaled_attributes, :journaled_partition_key, :journaled_app_name, to: :journaled_event
 
   def journaled_delivery
@@ -40,7 +39,6 @@ class Journaled::Writer
       serialized_event: serialized_event,
       partition_key: journaled_partition_key,
       app_name: journaled_app_name,
-      priority: priority,
     )
   end
 
