@@ -1,7 +1,7 @@
 module Journaled
   class << self
-    def enqueue!(performable)
-      on_enqueue.call(performable)
+    def enqueue!(*args)
+      on_enqueue.call(*args)
     end
 
     def on_enqueue(&block)
@@ -12,9 +12,7 @@ module Journaled
     private
 
     def delayed_job_enqueue
-      ->(performable) do
-        Delayed::Job.enqueue(performable, priority: Journaled.job_priority)
-      end
+      ->(*args) { Delayed::Job.enqueue(*args) }
     end
   end
 end

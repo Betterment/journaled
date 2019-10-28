@@ -42,8 +42,9 @@ module Journaled::Event
   private
 
   class_methods do
-    def journal_attributes(*args)
+    def journal_attributes(*args, **opts)
       journaled_attributes.concat(args)
+      journaled_enqueue_opts.merge!(opts)
     end
 
     def journaled_attributes
@@ -56,6 +57,10 @@ module Journaled::Event
   end
 
   included do
+    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) do
+      { priority: Journaled.job_priority }
+    end
+
     journal_attributes :id, :event_type, :created_at
   end
 end

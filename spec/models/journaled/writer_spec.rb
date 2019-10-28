@@ -19,6 +19,7 @@ RSpec.describe Journaled::Writer do
           journaled_attributes: {},
           journaled_partition_key: '',
           journaled_app_name: nil,
+          journaled_enqueue_opts: {},
         )
       end
 
@@ -34,6 +35,7 @@ RSpec.describe Journaled::Writer do
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
           journaled_app_name: nil,
+          journaled_enqueue_opts: {},
         )
       end
 
@@ -67,12 +69,14 @@ RSpec.describe Journaled::Writer do
       allow(File).to receive(:read).with(schema_path).and_return(schema_file_contents)
     end
 
+    let(:journaled_enqueue_opts) { {} }
     let(:journaled_event) do
       double(
         journaled_schema_name: :fake_schema_name,
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
         journaled_app_name: 'my_app',
+        journaled_enqueue_opts: journaled_enqueue_opts,
       )
     end
 
@@ -108,19 +112,8 @@ RSpec.describe Journaled::Writer do
           expect(Journaled::Delivery).to have_received(:new).with(hash_including(app_name: 'my_app'))
         end
 
-        it 'enqueues a Journaled::Delivery object with the serialized journaled_event at the lowest priority' do
-          expect { subject.journal! }.to change {
-            Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 20).count
-          }.from(0).to(1)
-        end
-
-        context 'when there is an app job priority is set' do
-          around do |example|
-            orig_priority = Journaled.job_priority
-            Journaled.job_priority = 13
-            example.run
-            Journaled.job_priority = orig_priority
-          end
+        context 'when there is a job priority specified in the enqueue opts' do
+          let(:journaled_enqueue_opts) { { priority: 13 } }
 
           it 'enqueues a Journaled::Delivery object with the given priority' do
             expect { subject.journal! }.to change {

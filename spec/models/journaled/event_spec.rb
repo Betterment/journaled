@@ -135,4 +135,26 @@ RSpec.describe Journaled::Event do
       end
     end
   end
+
+  describe '#journaled_enqueue_opts, .journaled_enqueue_opts' do
+    it 'defaults to including the default priority' do
+      expect(sample_journaled_event.journaled_enqueue_opts).to eq(priority: 20)
+      expect(sample_journaled_event_class.journaled_enqueue_opts).to eq(priority: 20)
+    end
+
+    context 'when there are custom opts provided' do
+      let(:sample_journaled_event_class) do
+        Class.new do
+          include Journaled::Event
+
+          journal_attributes :foo, priority: 34, foo: 'bar'
+        end
+      end
+
+      it 'merges in the custom opts' do
+        expect(sample_journaled_event.journaled_enqueue_opts).to eq(priority: 34, foo: 'bar')
+        expect(sample_journaled_event_class.journaled_enqueue_opts).to eq(priority: 34, foo: 'bar')
+      end
+    end
+  end
 end

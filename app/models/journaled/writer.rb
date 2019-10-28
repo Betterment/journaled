@@ -4,6 +4,7 @@ class Journaled::Writer
     journaled_partition_key
     journaled_attributes
     journaled_app_name
+    journaled_enqueue_opts
   ).freeze
 
   def initialize(journaled_event:)
@@ -26,13 +27,13 @@ class Journaled::Writer
   def journal!
     base_event_json_schema_validator.validate! serialized_event
     json_schema_validator.validate! serialized_event
-    Journaled.enqueue!(journaled_delivery)
+    Journaled.enqueue!(journaled_delivery, journaled_enqueue_opts)
   end
 
   private
 
   attr_reader :journaled_event
-  delegate :journaled_schema_name, :journaled_attributes, :journaled_partition_key, :journaled_app_name, to: :journaled_event
+  delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def journaled_delivery
     @journaled_delivery ||= Journaled::Delivery.new(
