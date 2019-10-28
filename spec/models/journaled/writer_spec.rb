@@ -128,6 +128,19 @@ RSpec.describe Journaled::Writer do
             }.from(0).to(1)
           end
         end
+
+        context 'when there is a custom enqueue config provided' do
+          around do |example|
+            Journaled.on_enqueue { |performable| raise(performable) }
+            example.run
+            Journaled.on_enqueue { |_performable| nil }
+          end
+
+          it 'enqueues a Journaled::Delivery object with the given priority' do
+            allow(Journaled::Delivery).to receive(:new).and_return('123')
+            expect { subject.journal! }.to raise_error('123')
+          end
+        end
       end
     end
   end

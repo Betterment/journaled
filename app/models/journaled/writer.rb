@@ -26,7 +26,7 @@ class Journaled::Writer
   def journal!
     base_event_json_schema_validator.validate! serialized_event
     json_schema_validator.validate! serialized_event
-    Delayed::Job.enqueue journaled_delivery, priority: Journaled.job_priority
+    Journaled.enqueue!(journaled_delivery)
   end
 
   private

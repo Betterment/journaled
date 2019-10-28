@@ -88,6 +88,16 @@ Journaling provides a number of different configuation options that can be set i
   This can be used to configure what `priority` the Delayed Jobs are enqueued with. This will be applied to all the Journaled::Devivery jobs that are created by this application.
   Ex: `Journaled.job_priority = 14`
 
+#### Delayed Backend
+
+This can be used to provide a custom backend for journaling jobs.
+The default backend configuration looks something like this:
+
+```ruby
+Journaled.on_enqueue do |performable|
+  Delayed::Job.enqueue performable, priority: Journaled.job_priority
+end
+```
 
 ### Change Journaling
 
