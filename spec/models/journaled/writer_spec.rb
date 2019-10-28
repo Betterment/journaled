@@ -141,7 +141,7 @@ RSpec.describe Journaled::Writer do
           around do |example|
             Journaled.on_enqueue { |performable| raise(performable) }
             example.run
-            Journaled.on_enqueue { |_performable| nil }
+            Journaled.remove_instance_variable('@on_enqueue')
           end
 
           it 'enqueues a Journaled::Delivery object with the given priority' do
