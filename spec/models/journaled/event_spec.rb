@@ -137,9 +137,9 @@ RSpec.describe Journaled::Event do
   end
 
   describe '#journaled_enqueue_opts, .journaled_enqueue_opts' do
-    it 'defaults to including the default priority' do
-      expect(sample_journaled_event.journaled_enqueue_opts).to eq(priority: 20)
-      expect(sample_journaled_event_class.journaled_enqueue_opts).to eq(priority: 20)
+    it 'defaults to an empty hash' do
+      expect(sample_journaled_event.journaled_enqueue_opts).to eq({})
+      expect(sample_journaled_event_class.journaled_enqueue_opts).to eq({})
     end
 
     context 'when there are custom opts provided' do

@@ -57,9 +57,7 @@ module Journaled::Event
   end
 
   included do
-    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) do
-      { priority: Journaled.job_priority }
-    end
+    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
 
     journal_attributes :id, :event_type, :created_at
   end

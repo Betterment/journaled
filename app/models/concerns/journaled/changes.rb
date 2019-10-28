@@ -4,7 +4,7 @@ module Journaled::Changes
   included do
     cattr_accessor(:_journaled_change_definitions) { [] }
     cattr_accessor(:journaled_attribute_names) { [] }
-    cattr_accessor(:journaled_enqueue_opts) { { priority: Journaled.job_priority } }
+    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
 
     after_create do
       self.class._journaled_change_definitions.each do |definition|

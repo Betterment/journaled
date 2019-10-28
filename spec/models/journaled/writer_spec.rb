@@ -112,6 +112,21 @@ RSpec.describe Journaled::Writer do
           expect(Journaled::Delivery).to have_received(:new).with(hash_including(app_name: 'my_app'))
         end
 
+        context 'when there is no job priority specified in the enqueue opts' do
+          around do |example|
+            old_priority = Journaled.job_priority
+            Journaled.job_priority = 999
+            example.run
+            Journaled.job_priority = old_priority
+          end
+
+          it 'defaults to the global default' do
+            expect { subject.journal! }.to change {
+              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 999).count
+            }.from(0).to(1)
+          end
+        end
+
         context 'when there is a job priority specified in the enqueue opts' do
           let(:journaled_enqueue_opts) { { priority: 13 } }
 
