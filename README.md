@@ -94,10 +94,10 @@ Both model-level directives accept additional options to be passed into DelayedJ
 
 ```ruby
 # For change journaling:
-journal_changes_to :email, as: :identity_change, priority: 10
+journal_changes_to :email, as: :identity_change, enqueue_with: { priority: 10 }
 
 # Or for custom journaling:
-journal_attributes :email, priority: 20, queue: 'journaled'
+journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
 ```
 
 ### Change Journaling
