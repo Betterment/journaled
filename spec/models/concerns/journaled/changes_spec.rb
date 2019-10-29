@@ -95,7 +95,7 @@ RSpec.describe Journaled::Changes do
 
   context 'when DJ opts are provided' do
     before do
-      klass.journal_changes_to :thing, as: :other_thing, enqueue_with: { asdf: 1, foo: 'bar' }, other_opt: '*'
+      klass.journal_changes_to :thing, as: :other_thing, enqueue_with: { asdf: 1, foo: 'bar' }
     end
 
     it 'sets them on the model' do
