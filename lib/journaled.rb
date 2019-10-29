@@ -1,4 +1,5 @@
 require "aws-sdk-resources"
+require "delayed_job"
 require "json-schema"
 require "request_store"
 
