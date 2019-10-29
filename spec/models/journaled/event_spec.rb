@@ -147,7 +147,7 @@ RSpec.describe Journaled::Event do
         Class.new do
           include Journaled::Event
 
-          journal_attributes :foo, enqueue_with: { priority: 34, foo: 'bar' }, other_opt: 'boo'
+          journal_attributes :foo, enqueue_with: { priority: 34, foo: 'bar' }
         end
       end
 

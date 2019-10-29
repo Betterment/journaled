@@ -42,9 +42,9 @@ module Journaled::Event
   private
 
   class_methods do
-    def journal_attributes(*args, **opts)
+    def journal_attributes(*args, enqueue_with: {})
       journaled_attributes.concat(args)
-      journaled_enqueue_opts.merge!(opts.fetch(:enqueue_with, {}))
+      journaled_enqueue_opts.merge!(enqueue_with)
     end
 
     def journaled_attributes
