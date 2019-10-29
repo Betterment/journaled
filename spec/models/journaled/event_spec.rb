@@ -25,22 +25,7 @@ RSpec.describe Journaled::Event do
       it 'creates a Journaled::Writer with this event and journals it with the default priority' do
         sample_journaled_event.journal!
         expect(Journaled::Writer).to have_received(:new)
-          .with(journaled_event: sample_journaled_event, priority: Journaled::JobPriority::EVENTUAL)
-        expect(mock_journaled_writer).to have_received(:journal!)
-      end
-    end
-
-    context 'when there is an app job priority is set' do
-      around do |example|
-        orig_priority = Journaled.job_priority
-        Journaled.job_priority = 13
-        example.run
-        Journaled.job_priority = orig_priority
-      end
-
-      it 'creates a Journaled::Writer with this event and journals it with the given priority' do
-        sample_journaled_event.journal!
-        expect(Journaled::Writer).to have_received(:new).with(journaled_event: sample_journaled_event, priority: 13)
+          .with(journaled_event: sample_journaled_event)
         expect(mock_journaled_writer).to have_received(:journal!)
       end
     end
@@ -147,6 +132,28 @@ RSpec.describe Journaled::Event do
           foo: 'foo_return',
           bar: 'bar_return',
         )
+      end
+    end
+  end
+
+  describe '#journaled_enqueue_opts, .journaled_enqueue_opts' do
+    it 'defaults to an empty hash' do
+      expect(sample_journaled_event.journaled_enqueue_opts).to eq({})
+      expect(sample_journaled_event_class.journaled_enqueue_opts).to eq({})
+    end
+
+    context 'when there are custom opts provided' do
+      let(:sample_journaled_event_class) do
+        Class.new do
+          include Journaled::Event
+
+          journal_attributes :foo, enqueue_with: { priority: 34, foo: 'bar' }, other_opt: 'boo'
+        end
+      end
+
+      it 'merges in the custom opts' do
+        expect(sample_journaled_event.journaled_enqueue_opts).to eq(priority: 34, foo: 'bar')
+        expect(sample_journaled_event_class.journaled_enqueue_opts).to eq(priority: 34, foo: 'bar')
       end
     end
   end

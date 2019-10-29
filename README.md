@@ -88,6 +88,17 @@ Journaling provides a number of different configuation options that can be set i
   This can be used to configure what `priority` the Delayed Jobs are enqueued with. This will be applied to all the Journaled::Devivery jobs that are created by this application.
   Ex: `Journaled.job_priority = 14`
 
+#### DJ `enqueue` options
+
+Both model-level directives accept additional options to be passed into DelayedJob's `enqueue` method:
+
+```ruby
+# For change journaling:
+journal_changes_to :email, as: :identity_change, enqueue_with: { priority: 10 }
+
+# Or for custom journaling:
+journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
+```
 
 ### Change Journaling
 

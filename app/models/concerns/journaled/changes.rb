@@ -2,10 +2,9 @@ module Journaled::Changes
   extend ActiveSupport::Concern
 
   included do
-    cattr_accessor :_journaled_change_definitions
-    cattr_accessor :journaled_attribute_names
-    self._journaled_change_definitions = []
-    self.journaled_attribute_names = []
+    cattr_accessor(:_journaled_change_definitions) { [] }
+    cattr_accessor(:journaled_attribute_names) { [] }
+    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
 
     after_create do
       self.class._journaled_change_definitions.each do |definition|
@@ -57,7 +56,7 @@ module Journaled::Changes
   end
 
   class_methods do
-    def journal_changes_to(*attribute_names, as:) # rubocop:disable Naming/UncommunicativeMethodParamName
+    def journal_changes_to(*attribute_names, as:, **opts) # rubocop:disable Naming/UncommunicativeMethodParamName, Metrics/AbcSize
       if attribute_names.empty? || attribute_names.any? { |n| !n.is_a?(Symbol) }
         raise "one or more symbol attribute_name arguments is required"
       end
@@ -66,6 +65,7 @@ module Journaled::Changes
 
       _journaled_change_definitions << Journaled::ChangeDefinition.new(attribute_names: attribute_names, logical_operation: as)
       journaled_attribute_names.concat(attribute_names)
+      journaled_enqueue_opts.merge!(opts.fetch(:enqueue_with, {}))
     end
 
     if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::MINOR >= 2)

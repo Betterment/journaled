@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Writer do
-  subject { described_class.new journaled_event: journaled_event, priority: Journaled::JobPriority::EVENTUAL }
+  subject { described_class.new journaled_event: journaled_event }
 
   describe '#initialize' do
     context 'when the Journaled Event does not implement all the necessary methods' do
@@ -19,6 +19,7 @@ RSpec.describe Journaled::Writer do
           journaled_attributes: {},
           journaled_partition_key: '',
           journaled_app_name: nil,
+          journaled_enqueue_opts: {},
         )
       end
 
@@ -34,6 +35,7 @@ RSpec.describe Journaled::Writer do
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
           journaled_app_name: nil,
+          journaled_enqueue_opts: {},
         )
       end
 
@@ -67,12 +69,14 @@ RSpec.describe Journaled::Writer do
       allow(File).to receive(:read).with(schema_path).and_return(schema_file_contents)
     end
 
+    let(:journaled_enqueue_opts) { {} }
     let(:journaled_event) do
       double(
         journaled_schema_name: :fake_schema_name,
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
         journaled_app_name: 'my_app',
+        journaled_enqueue_opts: journaled_enqueue_opts,
       )
     end
 
@@ -108,18 +112,27 @@ RSpec.describe Journaled::Writer do
           expect(Journaled::Delivery).to have_received(:new).with(hash_including(app_name: 'my_app'))
         end
 
-        it 'enqueues a Journaled::Delivery object with the serialized journaled_event at the lowest priority' do
-          expect { subject.journal! }.to change {
-            Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: Journaled::JobPriority::EVENTUAL).count
-          }.from(0).to(1)
+        context 'when there is no job priority specified in the enqueue opts' do
+          around do |example|
+            old_priority = Journaled.job_priority
+            Journaled.job_priority = 999
+            example.run
+            Journaled.job_priority = old_priority
+          end
+
+          it 'defaults to the global default' do
+            expect { subject.journal! }.to change {
+              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 999).count
+            }.from(0).to(1)
+          end
         end
 
-        context 'when the Writer was initialized with a priority' do
-          subject { described_class.new journaled_event: journaled_event, priority: Journaled::JobPriority::INTERACTIVE }
+        context 'when there is a job priority specified in the enqueue opts' do
+          let(:journaled_enqueue_opts) { { priority: 13 } }
 
-          it 'enqueues the event at the given priority' do
+          it 'enqueues a Journaled::Delivery object with the given priority' do
             expect { subject.journal! }.to change {
-              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: Journaled::JobPriority::INTERACTIVE).count
+              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 13).count
             }.from(0).to(1)
           end
         end

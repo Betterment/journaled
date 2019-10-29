@@ -92,4 +92,15 @@ RSpec.describe Journaled::Changes do
     expect(change_writer).to have_received(:delete)
     expect(Journaled::ChangeWriter).to have_received(:new)
   end
+
+  context 'when DJ opts are provided' do
+    before do
+      klass.journal_changes_to :thing, as: :other_thing, enqueue_with: { asdf: 1, foo: 'bar' }, other_opt: '*'
+    end
+
+    it 'sets them on the model' do
+      expect(klass.journaled_enqueue_opts).to eq(asdf: 1, foo: 'bar')
+      expect(klass.new.journaled_enqueue_opts).to eq(asdf: 1, foo: 'bar')
+    end
+  end
 end

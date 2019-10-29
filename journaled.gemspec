@@ -32,6 +32,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rubocop-betterment", "~> 1.3"
   s.add_development_dependency "spring"
   s.add_development_dependency "spring-commands-rspec"
+  s.add_development_dependency 'sprockets', '< 4.0'
   s.add_development_dependency "timecop"
   s.add_development_dependency "webmock"
 end
