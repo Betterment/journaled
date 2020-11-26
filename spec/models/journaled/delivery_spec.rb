@@ -185,5 +185,38 @@ RSpec.describe Journaled::Delivery do
         expect(subject.kinesis_client_config).to include(access_key_id: 'key_id', secret_access_key: 'secret')
       end
     end
+
+    it "will set http_idle_timeout by default" do
+      expect(subject.kinesis_client_config).to include(http_idle_timeout: 5)
+    end
+
+    it "will set http_open_timeout by default" do
+      expect(subject.kinesis_client_config).to include(http_open_timeout: 15)
+    end
+
+    it "will set http_read_timeout by default" do
+      expect(subject.kinesis_client_config).to include(http_read_timeout: 60)
+    end
+
+    context "when Journaled.http_idle_timeout is specified" do
+      it "will set http_idle_timeout by specified value" do
+        allow(Journaled).to receive(:http_idle_timeout).and_return(2)
+        expect(subject.kinesis_client_config).to include(http_idle_timeout: 2)
+      end
+    end
+
+    context "when Journaled.http_open_timeout is specified" do
+      it "will set http_open_timeout by specified value" do
+        allow(Journaled).to receive(:http_open_timeout).and_return(2)
+        expect(subject.kinesis_client_config).to include(http_open_timeout: 2)
+      end
+    end
+
+    context "when Journaled.http_read_timeout is specified" do
+      it "will set http_read_timeout by specified value" do
+        allow(Journaled).to receive(:http_read_timeout).and_return(2)
+        expect(subject.kinesis_client_config).to include(http_read_timeout: 2)
+      end
+    end
   end
 end

@@ -88,6 +88,18 @@ Journaling provides a number of different configuation options that can be set i
   This can be used to configure what `priority` the Delayed Jobs are enqueued with. This will be applied to all the Journaled::Devivery jobs that are created by this application.
   Ex: `Journaled.job_priority = 14`
 
+#### `Journaled.http_idle_timeout` (default: 1 second)
+
+  The number of seconds a persistent connection is allowed to sit idle before it should no longer be used.
+
+#### `Journaled.http_open_timeout` (default: 15 seconds)
+
+  The number of seconds before the :http_handler should timeout while trying to open a new HTTP session.
+
+#### `Journaled.http_read_timeout` (default: 60 seconds)
+
+  The number of seconds before the :http_handler should timeout while waiting for a HTTP response.
+
 #### DJ `enqueue` options
 
 Both model-level directives accept additional options to be passed into DelayedJob's `enqueue` method:

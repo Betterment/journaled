@@ -1,4 +1,4 @@
-class Journaled::Delivery
+class Journaled::Delivery # rubocop:disable Betterment/ActiveJobPerformable
   DEFAULT_REGION = 'us-east-1'.freeze
 
   def initialize(serialized_event:, partition_key:, app_name:)
@@ -26,6 +26,9 @@ class Journaled::Delivery
     {
       region: ENV.fetch('AWS_DEFAULT_REGION', DEFAULT_REGION),
       retry_limit: 0,
+      http_idle_timeout: Journaled.http_idle_timeout,
+      http_open_timeout: Journaled.http_open_timeout,
+      http_read_timeout: Journaled.http_read_timeout,
     }.merge(credentials)
   end
 
