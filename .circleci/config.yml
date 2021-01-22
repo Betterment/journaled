@@ -39,6 +39,8 @@ jobs:
         RACK_ENV: test
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -59,10 +61,10 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -72,7 +74,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -102,6 +104,8 @@ jobs:
         RACK_ENV: test
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -122,10 +126,10 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -135,7 +139,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -165,6 +169,8 @@ jobs:
         RACK_ENV: test
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -185,10 +191,10 @@ jobs:
           coach check
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -198,7 +204,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -232,8 +238,11 @@ jobs:
       command: postgres --max_prepared_transactions=100
       environment:
         POSTGRES_USER: betterment
+        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -249,10 +258,10 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -262,7 +271,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -277,12 +286,12 @@ jobs:
         name: run rspec tests
         command: |
           cd .
-          mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
+          mkdir -p /tmp/test-results
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
+                            --out /tmp/test-results/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -295,6 +304,14 @@ jobs:
           if [ -d tmp/screenshots ]; then
             mv tmp/screenshots /tmp/artifacts
           fi
+        when: always
+    - run:
+        name: save rspec test results
+        command: |
+          cd .
+          mkdir -p /tmp/test-results
+          mkdir -p /tmp/artifacts
+          cp -r /tmp/test-results /tmp/artifacts
         when: always
     - run:
         name: save rspec example persistence file
@@ -313,10 +330,10 @@ jobs:
           fi
         when: always
     - store_test_results:
-        path: "/tmp/artifacts"
+        path: "/tmp/test-results"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/test-results/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -341,8 +358,11 @@ jobs:
       command: postgres --max_prepared_transactions=100
       environment:
         POSTGRES_USER: betterment
+        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -358,10 +378,10 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -371,7 +391,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_5_2.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -386,12 +406,12 @@ jobs:
         name: run rspec tests
         command: |
           cd .
-          mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
+          mkdir -p /tmp/test-results
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
+                            --out /tmp/test-results/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -404,6 +424,14 @@ jobs:
           if [ -d tmp/screenshots ]; then
             mv tmp/screenshots /tmp/artifacts
           fi
+        when: always
+    - run:
+        name: save rspec test results
+        command: |
+          cd .
+          mkdir -p /tmp/test-results
+          mkdir -p /tmp/artifacts
+          cp -r /tmp/test-results /tmp/artifacts
         when: always
     - run:
         name: save rspec example persistence file
@@ -422,10 +450,10 @@ jobs:
           fi
         when: always
     - store_test_results:
-        path: "/tmp/artifacts"
+        path: "/tmp/test-results"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/test-results/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -450,8 +478,11 @@ jobs:
       command: postgres --max_prepared_transactions=100
       environment:
         POSTGRES_USER: betterment
+        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
+    - attach_workspace:
+        at: "/tmp/"
     - run:
         name: Generate git refs cache key
         command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
@@ -467,10 +498,10 @@ jobs:
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
     - restore_cache:
         keys:
-        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        - v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -480,7 +511,7 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v3-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
+        key: v4-journaled-2.6.1-gemfiles/rails_6_0.gemfile-{{ checksum "./coach.yml"
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
@@ -495,12 +526,12 @@ jobs:
         name: run rspec tests
         command: |
           cd .
-          mkdir -p /tmp/artifacts
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings --timings-type=classname)"
+          mkdir -p /tmp/test-results
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
           echo "RSpec file pattern: $TEST_FILES"
           bundle exec rspec --format progress \
                             --format RspecJunitFormatter \
-                            --out /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml \
+                            --out /tmp/test-results/rspec${CIRCLE_NODE_INDEX}.xml \
                             -- \
                             $TEST_FILES
     - run:
@@ -513,6 +544,14 @@ jobs:
           if [ -d tmp/screenshots ]; then
             mv tmp/screenshots /tmp/artifacts
           fi
+        when: always
+    - run:
+        name: save rspec test results
+        command: |
+          cd .
+          mkdir -p /tmp/test-results
+          mkdir -p /tmp/artifacts
+          cp -r /tmp/test-results /tmp/artifacts
         when: always
     - run:
         name: save rspec example persistence file
@@ -531,10 +570,10 @@ jobs:
           fi
         when: always
     - store_test_results:
-        path: "/tmp/artifacts"
+        path: "/tmp/test-results"
     - run:
         name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/rspec${CIRCLE_NODE_INDEX}.xml
+        command: upload_junit_file_to_coach /tmp/artifacts/test-results/rspec${CIRCLE_NODE_INDEX}.xml
         when: on_fail
     - store_artifacts:
         path: "/tmp/artifacts"
@@ -583,4 +622,9 @@ workflows:
         context: org-global
         requires:
         - started
-coach_version: 0.21.7
+    when: "<< pipeline.parameters.run_default_workflows >>"
+coach_version: 0.28.7
+parameters:
+  run_default_workflows:
+    type: boolean
+    default: true
