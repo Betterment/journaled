@@ -10,7 +10,7 @@ module Journaled
   mattr_accessor :default_app_name
   mattr_accessor(:job_priority) { 20 }
   mattr_accessor(:http_idle_timeout) { 5 }
-  mattr_accessor(:http_open_timeout) { 15 }
+  mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
 
   def development_or_test?

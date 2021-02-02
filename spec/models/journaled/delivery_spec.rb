@@ -191,7 +191,7 @@ RSpec.describe Journaled::Delivery do
     end
 
     it "will set http_open_timeout by default" do
-      expect(subject.kinesis_client_config).to include(http_open_timeout: 15)
+      expect(subject.kinesis_client_config).to include(http_open_timeout: 2)
     end
 
     it "will set http_read_timeout by default" do
@@ -207,8 +207,8 @@ RSpec.describe Journaled::Delivery do
 
     context "when Journaled.http_open_timeout is specified" do
       it "will set http_open_timeout by specified value" do
-        allow(Journaled).to receive(:http_open_timeout).and_return(2)
-        expect(subject.kinesis_client_config).to include(http_open_timeout: 2)
+        allow(Journaled).to receive(:http_open_timeout).and_return(1)
+        expect(subject.kinesis_client_config).to include(http_open_timeout: 1)
       end
     end
 
