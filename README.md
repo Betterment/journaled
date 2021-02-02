@@ -92,7 +92,7 @@ Journaling provides a number of different configuation options that can be set i
 
   The number of seconds a persistent connection is allowed to sit idle before it should no longer be used.
 
-#### `Journaled.http_open_timeout` (default: 15 seconds)
+#### `Journaled.http_open_timeout` (default: 2 seconds)
 
   The number of seconds before the :http_handler should timeout while trying to open a new HTTP session.
 
