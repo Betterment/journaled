@@ -1,4 +1,3 @@
-require 'delayed_job_active_record'
 rails_env = ENV['RAILS_ENV'] ||= 'test'
 db_adapter = ENV['DB_ADAPTER'] ||= 'postgresql'
 require File.expand_path('dummy/config/environment.rb', __dir__)
