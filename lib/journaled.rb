@@ -4,7 +4,6 @@ require "json-schema"
 require "request_store"
 
 require "journaled/engine"
-require 'journaled/enqueue'
 
 module Journaled
   mattr_accessor :default_app_name
