@@ -12,6 +12,7 @@ module Journaled
   mattr_accessor(:http_idle_timeout) { 5 }
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
+  mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
 
   def development_or_test?
     %w(development test).include?(Rails.env)
