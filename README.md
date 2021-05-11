@@ -1,16 +1,16 @@
 # Journaled
 
-A Rails engine to durably deliver schematized events to Amazon Kinesis via DelayedJob.
+A Rails engine to durably deliver schematized events to Amazon Kinesis via ActiveJob.
 
 More specifically, `journaled` is composed of three opinionated pieces:
 schema definition/validation via JSON Schema, transactional enqueueing
-via Delayed::Job (specifically `delayed_job_active_record`), and event
+via ActiveJob (specifically, via a DB-backed queue adapter), and event
 transmission via Amazon Kinesis. Our current use-cases include
 transmitting audit events for durable storage in S3 and/or analytical
 querying in Amazon Redshift.
 
 Journaled provides an at-least-once event delivery guarantee assuming
-Delayed::Job is configured not to delete jobs on failure.
+ActiveJob's queue adapter is not configured to delete jobs on failure.
 
 Note: Do not use the journaled gem to build an event sourcing solution
 as it does not guarantee total ordering of events. It's possible we'll
@@ -20,9 +20,20 @@ durable, eventually consistent record that discrete events happened.
 
 ## Installation
 
-1. [Install `delayed_job_active_record`](https://github.com/collectiveidea/delayed_job_active_record#installation)
-if you haven't already.
+1. If you haven't already,
+[configure ActiveJob](https://guides.rubyonrails.org/active_job_basics.html)
+to use one of the following queue adapters:
 
+- `:delayed_job` (via `delayed_job_active_record`)
+- `:que`
+- `:good_job`
+- `:delayed`
+
+Ensure that your queue adapter is not configured to delete jobs on failure.
+
+**If you launch your application in production mode and the gem detects that
+`ActiveJob::Base.queue_adapter` is not in the above list, it will raise an exception
+and prevent your application from performing unsafe journaling.**
 
 2. To integrate Journaled into your application, simply include the gem in your
 app's Gemfile.
@@ -85,7 +96,7 @@ Journaling provides a number of different configuation options that can be set i
 
 #### `Journaled.job_priority` (default: 20)
 
-  This can be used to configure what `priority` the Delayed Jobs are enqueued with. This will be applied to all the Journaled::Devivery jobs that are created by this application.
+  This can be used to configure what `priority` the ActiveJobs are enqueued with. This will be applied to all the Journaled::DeliveryJobs that are created by this application.
   Ex: `Journaled.job_priority = 14`
 
 #### `Journaled.http_idle_timeout` (default: 1 second)
@@ -100,9 +111,9 @@ Journaling provides a number of different configuation options that can be set i
 
   The number of seconds before the :http_handler should timeout while waiting for a HTTP response.
 
-#### DJ `enqueue` options
+#### ActiveJob `set` options
 
-Both model-level directives accept additional options to be passed into DelayedJob's `enqueue` method:
+Both model-level directives accept additional options to be passed into ActiveJob's `set` method:
 
 ```ruby
 # For change journaling:
