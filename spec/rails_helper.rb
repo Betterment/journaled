@@ -6,7 +6,6 @@ require 'rspec/rails'
 require 'timecop'
 require 'webmock/rspec'
 require 'journaled/rspec'
-require 'pry-rails'
 
 Dir[Rails.root.join('..', 'support', '**', '*.rb')].each { |f| require f }
 
