@@ -2,9 +2,6 @@ project_type: ruby_gem
 ruby_version: 2.6.1
 resource_class: small
 cache_sequence: 4
-databases:
-  - type: postgresql
-    version: 9.6
 test_gemfiles:
   - gemfiles/rails_5_1.gemfile
   - gemfiles/rails_5_2.gemfile

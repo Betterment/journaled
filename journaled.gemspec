@@ -23,13 +23,13 @@ Gem::Specification.new do |s|
   s.add_dependency "request_store"
 
   s.add_development_dependency "appraisal", "~> 2.2.0"
-  s.add_development_dependency "pg"
   s.add_development_dependency "rspec-rails"
   s.add_development_dependency "rspec_junit_formatter"
   s.add_development_dependency "rubocop-betterment", "~> 1.3"
   s.add_development_dependency "spring"
   s.add_development_dependency "spring-commands-rspec"
   s.add_development_dependency 'sprockets', '< 4.0'
+  s.add_development_dependency "sqlite3"
   s.add_development_dependency "timecop"
   s.add_development_dependency "webmock"
 end
