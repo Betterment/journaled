@@ -99,6 +99,8 @@ Journaling provides a number of different configuation options that can be set i
   This can be used to configure what `priority` the ActiveJobs are enqueued with. This will be applied to all the Journaled::DeliveryJobs that are created by this application.
   Ex: `Journaled.job_priority = 14`
 
+  _Note that job priority is only supported on Rails 6.0+. Prior Rails versions will ignore this parameter and enqueue jobs with the underlying ActiveJob adapter's default priority._
+
 #### `Journaled.http_idle_timeout` (default: 1 second)
 
   The number of seconds a persistent connection is allowed to sit idle before it should no longer be used.
