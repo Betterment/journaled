@@ -4,38 +4,42 @@ if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::M
   # rubocop:disable Rails/SkipsModelValidations
   RSpec.describe "Raw database change protection" do
     let(:journaled_class) do
-      Class.new(Delayed::Job) do
+      Class.new(ActiveRecord::Base) do
         include Journaled::Changes
 
-        journal_changes_to :locked_at, as: :attempt
+        self.table_name = 'widgets'
+
+        journal_changes_to :name, as: :attempt
       end
     end
 
     let(:journaled_class_with_no_journaled_columns) do
-      Class.new(Delayed::Job) do
+      Class.new(ActiveRecord::Base) do
         include Journaled::Changes
+
+        self.table_name = 'widgets'
       end
     end
 
     describe "the relation" do
       describe "#update_all" do
         it "refuses on journaled columns passed as hash" do
-          expect { journaled_class.update_all(locked_at: nil) }.to raise_error(/aborted by Journaled/)
+          expect { journaled_class.update_all(name: nil) }.to raise_error(/aborted by Journaled/)
         end
 
         it "refuses on journaled columns passed as string" do
-          expect { journaled_class.update_all("\"locked_at\" = NULL") }.to raise_error(/aborted by Journaled/)
-          expect { journaled_class.update_all("locked_at = null") }.to raise_error(/aborted by Journaled/)
-          expect { journaled_class.update_all("delayed_jobs.locked_at = null") }.to raise_error(/aborted by Journaled/)
-          expect { journaled_class.update_all("last_error = 'locked_at'") }.not_to raise_error
+          expect { journaled_class.update_all("\"name\" = NULL") }.to raise_error(/aborted by Journaled/)
+          expect { journaled_class.update_all("name = null") }.to raise_error(/aborted by Journaled/)
+          expect { journaled_class.update_all("widgets.name = null") }.to raise_error(/aborted by Journaled/)
+          expect { journaled_class.update_all("other_column = 'name'") }.not_to raise_error
         end
 
         it "succeeds on unjournaled columns" do
-          expect { journaled_class.update_all(handler: "") }.not_to raise_error
+          expect { journaled_class.update_all(other_column: "") }.not_to raise_error
         end
 
         it "succeeds when forced on journaled columns" do
-          expect { journaled_class.update_all({ locked_at: nil }, force: true) }.not_to raise_error
+          expect { journaled_class.update_all({ name: nil }, force: true) }.not_to raise_error
         end
       end
 
@@ -69,29 +73,19 @@ if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::M
     end
 
     describe "an instance" do
-      let(:job) do
-        module TestJob
-          def perform
-            "foo"
-          end
-
-          module_function :perform
-        end
-      end
-
-      subject { journaled_class.enqueue(job) }
+      subject { journaled_class.create!(name: 'foo') }
 
       describe "#update_columns" do
         it "refuses on journaled columns" do
-          expect { subject.update_columns(locked_at: nil) }.to raise_error(/aborted by Journaled/)
+          expect { subject.update_columns(name: nil) }.to raise_error(/aborted by Journaled/)
         end
 
         it "succeeds on unjournaled columns" do
-          expect { subject.update_columns(handler: "") }.not_to raise_error
+          expect { subject.update_columns(other_column: "") }.not_to raise_error
         end
 
         it "succeeds when forced on journaled columns" do
-          expect { subject.update_columns({ locked_at: nil }, force: true) }.not_to raise_error
+          expect { subject.update_columns({ name: nil }, force: true) }.not_to raise_error
         end
       end
 
@@ -101,7 +95,7 @@ if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::M
         end
 
         it "succeeds if no journaled columns exist" do
-          instance = journaled_class_with_no_journaled_columns.enqueue(job)
+          instance = journaled_class_with_no_journaled_columns.create!
           expect { instance.delete }.not_to raise_error
         end
 

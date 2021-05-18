@@ -80,16 +80,12 @@ RSpec.describe Journaled::Writer do
       )
     end
 
-    around do |example|
-      with_jobs_delayed { example.run }
-    end
-
     context 'when the journaled event does NOT comply with the base_event schema' do
       let(:journaled_event_attributes) { { foo: 1 } }
 
       it 'raises an error and does not enqueue anything' do
         expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
-        expect(Delayed::Job.where('handler like ?', '%Journaled::Delivery%').count).to eq 0
+        expect(enqueued_jobs.count).to eq 0
       end
     end
 
@@ -99,7 +95,7 @@ RSpec.describe Journaled::Writer do
 
         it 'raises an error and does not enqueue anything' do
           expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
-          expect(Delayed::Job.where('handler like ?', '%Journaled::Delivery%').count).to eq 0
+          expect(enqueued_jobs.count).to eq 0
         end
       end
 
@@ -107,9 +103,8 @@ RSpec.describe Journaled::Writer do
         let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: :bar } }
 
         it 'creates a delivery with the app name passed through' do
-          allow(Journaled::Delivery).to receive(:new).and_call_original
-          subject.journal!
-          expect(Journaled::Delivery).to have_received(:new).with(hash_including(app_name: 'my_app'))
+          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect(enqueued_jobs.first[:args].first).to include('app_name' => 'my_app')
         end
 
         context 'when there is no job priority specified in the enqueue opts' do
@@ -122,7 +117,11 @@ RSpec.describe Journaled::Writer do
 
           it 'defaults to the global default' do
             expect { subject.journal! }.to change {
-              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 999).count
+              if Rails::VERSION::MAJOR < 6
+                enqueued_jobs.select { |j| j[:job] == Journaled::DeliveryJob }.count
+              else
+                enqueued_jobs.select { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }.count
+              end
             }.from(0).to(1)
           end
         end
@@ -130,9 +129,13 @@ RSpec.describe Journaled::Writer do
         context 'when there is a job priority specified in the enqueue opts' do
           let(:journaled_enqueue_opts) { { priority: 13 } }
 
-          it 'enqueues a Journaled::Delivery object with the given priority' do
+          it 'enqueues a Journaled::DeliveryJob with the given priority' do
             expect { subject.journal! }.to change {
-              Delayed::Job.where('handler like ?', '%Journaled::Delivery%').where(priority: 13).count
+              if Rails::VERSION::MAJOR < 6
+                enqueued_jobs.select { |j| j[:job] == Journaled::DeliveryJob }.count
+              else
+                enqueued_jobs.select { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }.count
+              end
             }.from(0).to(1)
           end
         end

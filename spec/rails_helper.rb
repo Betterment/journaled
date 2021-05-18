@@ -6,7 +6,6 @@ require 'rspec/rails'
 require 'timecop'
 require 'webmock/rspec'
 require 'journaled/rspec'
-require 'pry-rails'
 
 Dir[Rails.root.join('..', 'support', '**', '*.rb')].each { |f| require f }
 
@@ -15,6 +14,6 @@ RSpec.configure do |config|
 
   config.infer_spec_type_from_file_location!
 
-  config.include DelayedJobSpecHelper
+  config.include ActiveJob::TestHelper
   config.include EnvironmentSpecHelper
 end

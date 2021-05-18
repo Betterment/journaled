@@ -14,6 +14,10 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   completed:
     resource_class: small
     docker:
@@ -27,12 +31,16 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--lint--rails_5_1_gemfile:
     resource_class: small
     environment:
       BUNDLE_GEMFILE: gemfiles/rails_5_1.gemfile
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
@@ -92,12 +100,16 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--lint--rails_5_2_gemfile:
     resource_class: small
     environment:
       BUNDLE_GEMFILE: gemfiles/rails_5_2.gemfile
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
@@ -157,12 +169,16 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--lint--rails_6_0_gemfile:
     resource_class: small
     environment:
       BUNDLE_GEMFILE: gemfiles/rails_6_0.gemfile
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
@@ -222,6 +238,10 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--test--rails_5_1_gemfile:
     resource_class: small
     environment:
@@ -229,16 +249,11 @@ jobs:
       EAGER_LOAD: true
     parallelism: 1
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
         RACK_ENV: test
-    - image: circleci/postgres:9.6
-      command: postgres --max_prepared_transactions=100
-      environment:
-        POSTGRES_USER: betterment
-        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
     - attach_workspace:
@@ -275,14 +290,6 @@ jobs:
           }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
-        name: wait for postgresql db
-        command: dockerize -wait tcp://localhost:5432 -timeout 1m
-    - run:
-        name: setup database
-        command: |
-          cd .
-          bundle exec rake db:test:prepare
-    - run:
         name: run rspec tests
         command: |
           cd .
@@ -342,6 +349,10 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--test--rails_5_2_gemfile:
     resource_class: small
     environment:
@@ -349,16 +360,11 @@ jobs:
       EAGER_LOAD: true
     parallelism: 1
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
         RACK_ENV: test
-    - image: circleci/postgres:9.6
-      command: postgres --max_prepared_transactions=100
-      environment:
-        POSTGRES_USER: betterment
-        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
     - attach_workspace:
@@ -395,14 +401,6 @@ jobs:
           }}-{{ checksum "./gemfiles/rails_5_2.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
-        name: wait for postgresql db
-        command: dockerize -wait tcp://localhost:5432 -timeout 1m
-    - run:
-        name: setup database
-        command: |
-          cd .
-          bundle exec rake db:test:prepare
-    - run:
         name: run rspec tests
         command: |
           cd .
@@ -462,6 +460,10 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
   journaled--test--rails_6_0_gemfile:
     resource_class: small
     environment:
@@ -469,16 +471,11 @@ jobs:
       EAGER_LOAD: true
     parallelism: 1
     docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v2.x
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
         GEM_SOURCE: https://rubygems.org
         RAILS_ENV: test
         RACK_ENV: test
-    - image: circleci/postgres:9.6
-      command: postgres --max_prepared_transactions=100
-      environment:
-        POSTGRES_USER: betterment
-        POSTGRES_PASSWORD: password
     working_directory: "~/journaled"
     steps:
     - attach_workspace:
@@ -515,14 +512,6 @@ jobs:
           }}-{{ checksum "./gemfiles/rails_6_0.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
-        name: wait for postgresql db
-        command: dockerize -wait tcp://localhost:5432 -timeout 1m
-    - run:
-        name: setup database
-        command: |
-          cd .
-          bundle exec rake db:test:prepare
-    - run:
         name: run rspec tests
         command: |
           cd .
@@ -582,6 +571,10 @@ jobs:
         name: notify coach of Build Failures
         command: notify_coach build_failures
         when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
 workflows:
   version: 2
   all:
@@ -623,7 +616,7 @@ workflows:
         requires:
         - started
     when: "<< pipeline.parameters.run_default_workflows >>"
-coach_version: 0.28.7
+coach_version: 0.31.1
 parameters:
   run_default_workflows:
     type: boolean

@@ -28,7 +28,13 @@ if %w(development test).include? Rails.env
   RuboCop::RakeTask.new
 
   task(:default).clear
-  task default: %i(rubocop spec)
+  if ENV['APPRAISAL_INITIALIZED'] || ENV['CI']
+    task default: %i(rubocop spec)
+  else
+    require 'appraisal'
+    Appraisal::Task.new
+    task default: :appraisal
+  end
 
   task 'db:test:prepare' => 'db:setup'
 end

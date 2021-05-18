@@ -27,7 +27,9 @@ class Journaled::Writer
   def journal!
     base_event_json_schema_validator.validate! serialized_event
     json_schema_validator.validate! serialized_event
-    Journaled.enqueue!(journaled_delivery, journaled_enqueue_opts)
+    Journaled::DeliveryJob
+      .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
+      .perform_later(delivery_perform_args)
   end
 
   private
@@ -35,12 +37,12 @@ class Journaled::Writer
   attr_reader :journaled_event
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
-  def journaled_delivery
-    @journaled_delivery ||= Journaled::Delivery.new(
+  def delivery_perform_args
+    {
       serialized_event: serialized_event,
       partition_key: journaled_partition_key,
       app_name: journaled_app_name,
-    )
+    }
   end
 
   def serialized_event

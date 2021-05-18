@@ -83,6 +83,6 @@ class Journaled::Delivery # rubocop:disable Betterment/ActiveJobPerformable
     )
   end
 
-  class KinesisTemporaryFailure < NotTrulyExceptionalError
+  class KinesisTemporaryFailure < ::Journaled::NotTrulyExceptionalError
   end
 end

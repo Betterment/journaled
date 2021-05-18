@@ -1,21 +1,6 @@
-default: &default
-  pool: 5
-  encoding: unicode
-
-postgresql:
-  default: &postgres_default
-    adapter: postgresql
-    url: <%= ENV['DATABASE_URL'] %>
-  test: &postgres_test
-    <<: *postgres_default
-    url: <%= ENV['DATABASE_URL'] || "postgresql://localhost:#{ENV.fetch('PGPORT', 5432)}/journaled_test" %>
-    database: journaled_test
-  development: &postgres_development
-    <<: *postgres_default
-    url: <%= ENV['DATABASE_URL'] || "postgresql://localhost:#{ENV.fetch('PGPORT', 5432)}/journaled_development" %>
-    database: journaled_development
-
 development:
-  <<: *postgres_development
+  adapter: sqlite3
+  database: ":memory:"
 test:
-  <<: *postgres_test
+  adapter: sqlite3
+  database: ":memory:"
