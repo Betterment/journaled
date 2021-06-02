@@ -36,7 +36,7 @@ module Journaled
   end
 
   def detect_queue_adapter!
-    adapter = job_base_class_name.constantize.queue_adapter.class.name.split('::').last.underscore.gsub("_adapter", "")
+    adapter = job_base_class_name.constantize.queue_adapter_name
     unless SUPPORTED_QUEUE_ADAPTERS.include?(adapter)
       raise <<~MSG
         Journaled has detected an unsupported ActiveJob queue adapter: `:#{adapter}`
