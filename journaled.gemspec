@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   s.add_dependency "activerecord"
   s.add_dependency "aws-sdk-kinesis", "< 2"
   s.add_dependency "json-schema"
-  s.add_dependency "railties", ">= 5.1", "< 7.0"
+  s.add_dependency "railties", ">= 5.2"
   s.add_dependency "request_store"
 
   s.add_development_dependency "appraisal", "~> 2.2.0"

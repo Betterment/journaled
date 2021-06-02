@@ -35,75 +35,6 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
-  journaled--lint--rails_5_1_gemfile:
-    resource_class: small
-    environment:
-      BUNDLE_GEMFILE: gemfiles/rails_5_1.gemfile
-    docker:
-    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
-      environment:
-        GEM_SOURCE: https://rubygems.org
-        RAILS_ENV: test
-        RACK_ENV: test
-    working_directory: "~/journaled"
-    steps:
-    - attach_workspace:
-        at: "/tmp/"
-    - run:
-        name: Generate git refs cache key
-        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
-    - restore_cache:
-        keys:
-        - v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
-        - v2-git-refs-
-    - run:
-        name: Checkout code
-        command: checkout
-    - save_cache:
-        paths: ".git"
-        key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
-    - run:
-        name: run coach check
-        command: |
-          cd .
-          coach check
-    - restore_cache:
-        keys:
-        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
-          }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
-          }}
-        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
-    - run:
-        name: bundle install dependencies
-        command: |
-          cd .
-          bundle check --path vendor/bundle \
-            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
-    - save_cache:
-        paths:
-        - "./gemfiles/vendor/bundle"
-        key: v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
-          }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
-          }}
-    - run:
-        name: run rubocop
-        command: |
-          cd .
-          mkdir -p /tmp/artifacts
-          bundle exec rubocop --format progress \
-                              --format html \
-                              --out /tmp/artifacts/rubocop-report.html
-    - store_artifacts:
-        path: "/tmp/artifacts"
-        destination: artifacts
-    - run:
-        name: notify coach of Build Failures
-        command: notify_coach build_failures
-        when: on_fail
-    - run:
-        name: notify coach of Job Completions
-        command: notify_coach job_completions
-        when: always
   journaled--lint--rails_5_2_gemfile:
     resource_class: small
     environment:
@@ -173,6 +104,10 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
+    parameters:
+      _project:
+        default: journaled
+        type: string
   journaled--lint--rails_6_0_gemfile:
     resource_class: small
     environment:
@@ -242,12 +177,14 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
-  journaled--test--rails_5_1_gemfile:
+    parameters:
+      _project:
+        default: journaled
+        type: string
+  journaled--lint--rails_6_1_gemfile:
     resource_class: small
     environment:
-      BUNDLE_GEMFILE: gemfiles/rails_5_1.gemfile
-      EAGER_LOAD: true
-    parallelism: 1
+      BUNDLE_GEMFILE: gemfiles/rails_6_1.gemfile
     docker:
     - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
       environment:
@@ -271,12 +208,17 @@ jobs:
     - save_cache:
         paths: ".git"
         key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - run:
+        name: run coach check
+        command: |
+          cd .
+          coach check
     - restore_cache:
         keys:
-        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
-          }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
+        - v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-{{ checksum "./coach.yml"
+          }}-{{ checksum "./gemfiles/rails_6_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
-        - v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-
+        - v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-
     - run:
         name: bundle install dependencies
         command: |
@@ -286,62 +228,17 @@ jobs:
     - save_cache:
         paths:
         - "./gemfiles/vendor/bundle"
-        key: v4-journaled-2.6.1-gemfiles/rails_5_1.gemfile-{{ checksum "./coach.yml"
-          }}-{{ checksum "./gemfiles/rails_5_1.gemfile" }}-{{ checksum "./journaled.gemspec"
+        key: v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-{{ checksum "./coach.yml"
+          }}-{{ checksum "./gemfiles/rails_6_1.gemfile" }}-{{ checksum "./journaled.gemspec"
           }}
     - run:
-        name: run rspec tests
+        name: run rubocop
         command: |
           cd .
-          mkdir -p /tmp/test-results
-          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
-          echo "RSpec file pattern: $TEST_FILES"
-          bundle exec rspec --format progress \
-                            --format RspecJunitFormatter \
-                            --out /tmp/test-results/rspec${CIRCLE_NODE_INDEX}.xml \
-                            -- \
-                            $TEST_FILES
-    - run:
-        name: save screenshots
-        command: |
-          cd .
-          if [ -d spec/error_screenshots ]; then
-            mv spec/error_screenshots /tmp/artifacts
-          fi
-          if [ -d tmp/screenshots ]; then
-            mv tmp/screenshots /tmp/artifacts
-          fi
-        when: always
-    - run:
-        name: save rspec test results
-        command: |
-          cd .
-          mkdir -p /tmp/test-results
           mkdir -p /tmp/artifacts
-          cp -r /tmp/test-results /tmp/artifacts
-        when: always
-    - run:
-        name: save rspec example persistence file
-        command: |
-          cd .
-          if [ -f spec/examples.txt ]; then
-            mv spec/examples.txt /tmp/artifacts
-          fi
-        when: always
-    - run:
-        name: save test logs
-        command: |
-          cd .
-          if [ -f log/test.log ]; then
-            mv log/test.log /tmp/artifacts
-          fi
-        when: always
-    - store_test_results:
-        path: "/tmp/test-results"
-    - run:
-        name: upload junit file to coach
-        command: upload_junit_file_to_coach /tmp/artifacts/test-results/rspec${CIRCLE_NODE_INDEX}.xml
-        when: on_fail
+          bundle exec rubocop --format progress \
+                              --format html \
+                              --out /tmp/artifacts/rubocop-report.html
     - store_artifacts:
         path: "/tmp/artifacts"
         destination: artifacts
@@ -353,6 +250,10 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
+    parameters:
+      _project:
+        default: journaled
+        type: string
   journaled--test--rails_5_2_gemfile:
     resource_class: small
     environment:
@@ -464,6 +365,10 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
+    parameters:
+      _project:
+        default: journaled
+        type: string
   journaled--test--rails_6_0_gemfile:
     resource_class: small
     environment:
@@ -575,6 +480,125 @@ jobs:
         name: notify coach of Job Completions
         command: notify_coach job_completions
         when: always
+    parameters:
+      _project:
+        default: journaled
+        type: string
+  journaled--test--rails_6_1_gemfile:
+    resource_class: small
+    environment:
+      BUNDLE_GEMFILE: gemfiles/rails_6_1.gemfile
+      EAGER_LOAD: true
+    parallelism: 1
+    docker:
+    - image: 907128454492.dkr.ecr.us-east-1.amazonaws.com/betterment/ruby/2.6.1:v4.x
+      environment:
+        GEM_SOURCE: https://rubygems.org
+        RAILS_ENV: test
+        RACK_ENV: test
+    working_directory: "~/journaled"
+    steps:
+    - attach_workspace:
+        at: "/tmp/"
+    - run:
+        name: Generate git refs cache key
+        command: date +%Y-%m-%d > /tmp/.git-refs-cache-key
+    - restore_cache:
+        keys:
+        - v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+        - v2-git-refs-
+    - run:
+        name: Checkout code
+        command: checkout
+    - save_cache:
+        paths: ".git"
+        key: v2-git-refs-{{ checksum "/tmp/.git-refs-cache-key" }}
+    - restore_cache:
+        keys:
+        - v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-{{ checksum "./coach.yml"
+          }}-{{ checksum "./gemfiles/rails_6_1.gemfile" }}-{{ checksum "./journaled.gemspec"
+          }}
+        - v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-
+    - run:
+        name: bundle install dependencies
+        command: |
+          cd .
+          bundle check --path vendor/bundle \
+            || bundle install --clean --jobs=2 --retry=3 --path vendor/bundle
+    - save_cache:
+        paths:
+        - "./gemfiles/vendor/bundle"
+        key: v4-journaled-2.6.1-gemfiles/rails_6_1.gemfile-{{ checksum "./coach.yml"
+          }}-{{ checksum "./gemfiles/rails_6_1.gemfile" }}-{{ checksum "./journaled.gemspec"
+          }}
+    - run:
+        name: run rspec tests
+        command: |
+          cd .
+          mkdir -p /tmp/test-results
+          TEST_FILES="$(circleci tests glob 'spec/**/*_spec.rb' | circleci tests split --split-by=timings)"
+          echo "RSpec file pattern: $TEST_FILES"
+          bundle exec rspec --format progress \
+                            --format RspecJunitFormatter \
+                            --out /tmp/test-results/rspec${CIRCLE_NODE_INDEX}.xml \
+                            -- \
+                            $TEST_FILES
+    - run:
+        name: save screenshots
+        command: |
+          cd .
+          if [ -d spec/error_screenshots ]; then
+            mv spec/error_screenshots /tmp/artifacts
+          fi
+          if [ -d tmp/screenshots ]; then
+            mv tmp/screenshots /tmp/artifacts
+          fi
+        when: always
+    - run:
+        name: save rspec test results
+        command: |
+          cd .
+          mkdir -p /tmp/test-results
+          mkdir -p /tmp/artifacts
+          cp -r /tmp/test-results /tmp/artifacts
+        when: always
+    - run:
+        name: save rspec example persistence file
+        command: |
+          cd .
+          if [ -f spec/examples.txt ]; then
+            mv spec/examples.txt /tmp/artifacts
+          fi
+        when: always
+    - run:
+        name: save test logs
+        command: |
+          cd .
+          if [ -f log/test.log ]; then
+            mv log/test.log /tmp/artifacts
+          fi
+        when: always
+    - store_test_results:
+        path: "/tmp/test-results"
+    - run:
+        name: upload junit file to coach
+        command: upload_junit_file_to_coach /tmp/artifacts/test-results/rspec${CIRCLE_NODE_INDEX}.xml
+        when: on_fail
+    - store_artifacts:
+        path: "/tmp/artifacts"
+        destination: artifacts
+    - run:
+        name: notify coach of Build Failures
+        command: notify_coach build_failures
+        when: on_fail
+    - run:
+        name: notify coach of Job Completions
+        command: notify_coach job_completions
+        when: always
+    parameters:
+      _project:
+        default: journaled
+        type: string
 workflows:
   version: 2
   all:
@@ -585,16 +609,12 @@ workflows:
         context: org-global
         requires:
         - started
-        - journaled--lint--rails_5_1_gemfile
         - journaled--lint--rails_5_2_gemfile
         - journaled--lint--rails_6_0_gemfile
-        - journaled--test--rails_5_1_gemfile
+        - journaled--lint--rails_6_1_gemfile
         - journaled--test--rails_5_2_gemfile
         - journaled--test--rails_6_0_gemfile
-    - journaled--lint--rails_5_1_gemfile:
-        context: org-global
-        requires:
-        - started
+        - journaled--test--rails_6_1_gemfile
     - journaled--lint--rails_5_2_gemfile:
         context: org-global
         requires:
@@ -603,7 +623,7 @@ workflows:
         context: org-global
         requires:
         - started
-    - journaled--test--rails_5_1_gemfile:
+    - journaled--lint--rails_6_1_gemfile:
         context: org-global
         requires:
         - started
@@ -615,8 +635,12 @@ workflows:
         context: org-global
         requires:
         - started
+    - journaled--test--rails_6_1_gemfile:
+        context: org-global
+        requires:
+        - started
     when: "<< pipeline.parameters.run_default_workflows >>"
-coach_version: 0.31.1
+coach_version: 1.0.3.pre
 parameters:
   run_default_workflows:
     type: boolean
