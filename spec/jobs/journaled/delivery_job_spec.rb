@@ -78,6 +78,19 @@ RSpec.describe Journaled::DeliveryJob do
       end
     end
 
+    unless Gem::Version.new(Journaled::VERSION) < Gem::Version.new('5.0.0')
+      raise <<~MSG
+        Hey! I see that you're bumping the version to 5.0!
+
+        This is a reminder to:
+        - remove the `app_name` argument (and related logic) from `Journaled::DeliveryJob`,
+        - remove the following app_name test contexts, and
+        - make `stream_name` a required kwarg
+
+        Thanks!
+      MSG
+    end
+
     context 'when the legacy app_name argument is present but nil' do
       let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: nil } }
 
