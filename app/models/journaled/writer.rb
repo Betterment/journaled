@@ -5,7 +5,6 @@ class Journaled::Writer
     journaled_attributes
     journaled_stream_name
     journaled_enqueue_opts
-    journaled_stream_name
   ).freeze
 
   def initialize(journaled_event:)
