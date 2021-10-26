@@ -35,8 +35,8 @@ module Journaled::Event
     event_type
   end
 
-  def journaled_app_name
-    Journaled.default_app_name
+  def journaled_stream_name
+    Journaled.default_stream_name
   end
 
   private

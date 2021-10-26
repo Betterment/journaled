@@ -18,7 +18,7 @@ RSpec.describe Journaled::Writer do
           journaled_schema_name: nil,
           journaled_attributes: {},
           journaled_partition_key: '',
-          journaled_app_name: nil,
+          journaled_stream_name: nil,
           journaled_enqueue_opts: {},
         )
       end
@@ -34,7 +34,7 @@ RSpec.describe Journaled::Writer do
           journaled_schema_name: :fake_schema_name,
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
-          journaled_app_name: nil,
+          journaled_stream_name: nil,
           journaled_enqueue_opts: {},
         )
       end
@@ -75,7 +75,7 @@ RSpec.describe Journaled::Writer do
         journaled_schema_name: :fake_schema_name,
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
-        journaled_app_name: 'my_app',
+        journaled_stream_name: 'my_app_events',
         journaled_enqueue_opts: journaled_enqueue_opts,
       )
     end
@@ -104,7 +104,7 @@ RSpec.describe Journaled::Writer do
 
         it 'creates a delivery with the app name passed through' do
           expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
-          expect(enqueued_jobs.first[:args].first).to include('app_name' => 'my_app')
+          expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
 
         context 'when there is no job priority specified in the enqueue opts' do

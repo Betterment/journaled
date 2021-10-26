@@ -65,14 +65,14 @@ RSpec.describe Journaled::Event do
     end
   end
 
-  describe '#journaled_app_name' do
+  describe '#journaled_stream_name' do
     it 'returns nil in the base class so it can be set explicitly in apps spanning multiple app domains' do
-      expect(sample_journaled_event.journaled_app_name).to be_nil
+      expect(sample_journaled_event.journaled_stream_name).to be_nil
     end
 
     it 'returns the journaled default if set' do
-      allow(Journaled).to receive(:default_app_name).and_return("my_app")
-      expect(sample_journaled_event.journaled_app_name).to eq("my_app")
+      allow(Journaled).to receive(:default_stream_name).and_return("my_app_events")
+      expect(sample_journaled_event.journaled_stream_name).to eq("my_app_events")
     end
   end
 

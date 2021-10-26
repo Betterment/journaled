@@ -3,8 +3,9 @@ class Journaled::Writer
     journaled_schema_name
     journaled_partition_key
     journaled_attributes
-    journaled_app_name
+    journaled_stream_name
     journaled_enqueue_opts
+    journaled_stream_name
   ).freeze
 
   def initialize(journaled_event:)
@@ -41,7 +42,7 @@ class Journaled::Writer
     {
       serialized_event: serialized_event,
       partition_key: journaled_partition_key,
-      app_name: journaled_app_name,
+      stream_name: journaled_stream_name,
     }
   end
 

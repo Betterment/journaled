@@ -138,30 +138,30 @@ RSpec.describe Journaled::ChangeWriter do
       expect(subject.journaled_change_for("update", {}).logical_operation).to eq("identity_change")
     end
 
-    it "doesn't set journaled_app_name if model class doesn't respond to it" do
-      expect(subject.journaled_change_for("update", {}).journaled_app_name).to eq(nil)
+    it "doesn't set journaled_stream_name if model class doesn't respond to it" do
+      expect(subject.journaled_change_for("update", {}).journaled_stream_name).to eq(nil)
     end
 
     context "with journaled default app name set" do
       around do |example|
-        orig_app_name = Journaled.default_app_name
-        Journaled.default_app_name = "foo"
+        orig_app_name = Journaled.default_stream_name
+        Journaled.default_stream_name = "foo"
         example.run
-        Journaled.default_app_name = orig_app_name
+        Journaled.default_stream_name = orig_app_name
       end
 
       it "passes through default" do
-        expect(subject.journaled_change_for("update", {}).journaled_app_name).to eq("foo")
+        expect(subject.journaled_change_for("update", {}).journaled_stream_name).to eq("foo")
       end
     end
 
-    context "when model class defines journaled_app_name" do
+    context "when model class defines journaled_stream_name" do
       before do
-        allow(model_class).to receive(:journaled_app_name).and_return("my_app")
+        allow(model_class).to receive(:journaled_stream_name).and_return("my_app_events")
       end
 
-      it "sets journaled_app_name if model_class responds to it" do
-        expect(subject.journaled_change_for("update", {}).journaled_app_name).to eq("my_app")
+      it "sets journaled_stream_name if model_class responds to it" do
+        expect(subject.journaled_change_for("update", {}).journaled_stream_name).to eq("my_app_events")
       end
     end
   end
