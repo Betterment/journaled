@@ -31,7 +31,7 @@ module Journaled
 
     def self.legacy_computed_stream_name(app_name:)
       env_var_name = [app_name&.upcase, 'JOURNALED_STREAM_NAME'].compact.join('_')
-      @stream_name = ENV.fetch(env_var_name)
+      ENV.fetch(env_var_name)
     end
 
     def kinesis_client_config
