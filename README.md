@@ -83,9 +83,9 @@ app's Gemfile.
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
-### Upgrading from 3.1.0 to 4.0
+### Upgrading from 3.1.0
 
-Previous versions of Journaled (< 4.0) relied directly on environment variables for stream names, but now stream names are configured directly.
+Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
 When upgrading, you can use the following configuration to maintain the previous behavior:
 
 ```ruby
@@ -107,6 +107,16 @@ end
 ```
 
 When upgrading from 3.1 or below, `Journaled::DeliveryJob` will handle any jobs that remain in the queue by accepting an `app_name` argument. **This behavior will be removed in version 5.0**, so it is recommended to upgrade one major version at a time.
+
+### Upgrading from 2.5.0
+
+Versions of Journaled prior to 3.0 relied direclty on `delayed_job` and a "performable" class called `Journaled::Delivery`.
+In 3.0, this was superceded by an ActiveJob class called `Journaled::DeliveryJob`, but the `Journaled::Delivery` class was not removed until 4.0.
+
+Therefore, when upgrading from 2.5.0 or below, it is recommended to first upgrade to 3.1.0 (to allow any `Journaled::Delivery` jobs to finish working off) before upgrading to 4.0+.
+
+The upgrade to 3.1.0 will require a working ActiveJob config. ActiveJob can be configured globally by setting `ActiveJob::Base.queue_adapter`, or just for Journaled jobs by setting `Journaled::DeliveryJob.queue_adapter`.
+The `:delayed_job` queue adapter will allow you to continue relying on `delayed_job`. You may also consider switching your app(s) to [`delayed`](https://github.com/Betterment/delayed) and using the `:delayed` queue adapter.
 
 ## Usage
 
