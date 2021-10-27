@@ -8,7 +8,7 @@ require "journaled/engine"
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
 
-  mattr_accessor :default_app_name
+  mattr_accessor :default_stream_name
   mattr_accessor(:job_priority) { 20 }
   mattr_accessor(:http_idle_timeout) { 5 }
   mattr_accessor(:http_open_timeout) { 2 }

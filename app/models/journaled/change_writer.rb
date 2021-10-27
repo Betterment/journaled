@@ -27,7 +27,7 @@ class Journaled::ChangeWriter
       database_operation: database_operation,
       logical_operation: logical_operation,
       changes: JSON.dump(changes),
-      journaled_app_name: journaled_app_name,
+      journaled_stream_name: journaled_stream_name,
       journaled_enqueue_opts: model.journaled_enqueue_opts,
       actor: actor_uri,
     )
@@ -57,11 +57,11 @@ class Journaled::ChangeWriter
     end
   end
 
-  def journaled_app_name
-    if model.class.respond_to?(:journaled_app_name)
-      model.class.journaled_app_name
+  def journaled_stream_name
+    if model.class.respond_to?(:journaled_stream_name)
+      model.class.journaled_stream_name
     else
-      Journaled.default_app_name
+      Journaled.default_stream_name
     end
   end
 end

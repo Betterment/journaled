@@ -24,16 +24,16 @@ durable, eventually consistent record that discrete events happened.
 [configure ActiveJob](https://guides.rubyonrails.org/active_job_basics.html)
 to use one of the following queue adapters:
 
-- `:delayed_job` (via `delayed_job_active_record`)
-- `:que`
-- `:good_job`
-- `:delayed`
+    - `:delayed_job` (via `delayed_job_active_record`)
+    - `:que`
+    - `:good_job`
+    - `:delayed`
 
-Ensure that your queue adapter is not configured to delete jobs on failure.
+    Ensure that your queue adapter is not configured to delete jobs on failure.
 
-**If you launch your application in production mode and the gem detects that
-`ActiveJob::Base.queue_adapter` is not in the above list, it will raise an exception
-and prevent your application from performing unsafe journaling.**
+    **If you launch your application in production mode and the gem detects that
+    `ActiveJob::Base.queue_adapter` is not in the above list, it will raise an exception
+    and prevent your application from performing unsafe journaling.**
 
 2. To integrate Journaled into your application, simply include the gem in your
 app's Gemfile.
@@ -51,20 +51,21 @@ app's Gemfile.
     require 'journaled/rspec'
     ```
 
-3. You will also need to define the following environment variables to allow Journaled to publish events to your AWS Kinesis event stream:
-
-    * `JOURNALED_STREAM_NAME`
-
-    Special case: if your `Journaled::Event` objects override the
-    `#journaled_app_name` method to a non-nil value e.g. `my_app`, you will
-    instead need to provide a corresponding
-    `[upcased_app_name]_JOURNALED_STREAM_NAME` variable for each distinct
-    value, e.g. `MY_APP_JOURNALED_STREAM_NAME`. You can provide a default value
-    for all `Journaled::Event`s in an initializer like this:
+3. You will need to set the following config in an initializer to allow Journaled to publish events to your AWS Kinesis event stream:
 
     ```ruby
-    Journaled.default_app_name = 'my_app'
+    Journaled.default_stream_name = "my_app_#{Rails.env}_events"
     ```
+
+    You may also define a `#journaled_stream_name` method on `Journaled::Event` instances:
+
+    ```ruby
+    def journaled_stream_name
+      "my_app_#{Rails.env}_alternate_events"
+    end
+    ````
+
+3. You may also need to define environment variables to allow Journaled to publish events to your AWS Kinesis event stream:
 
     You may optionally define the following ENV vars to specify AWS
     credentials outside of the locations that the AWS SDK normally looks:
@@ -81,6 +82,41 @@ app's Gemfile.
       * `JOURNALED_IAM_ROLE_ARN`
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
+
+### Upgrading from 3.1.0
+
+Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
+When upgrading, you can use the following configuration to maintain the previous behavior:
+
+```ruby
+Journaled.default_stream_name = ENV['JOURNALED_STREAM_NAME']
+```
+
+If you previously specified a `Journaled.default_app_name`, you would have required a more precise environment variable name (substitute `{{upcase_app_name}}`):
+
+```ruby
+Journaled.default_stream_name = ENV["{{upcase_app_name}}_JOURNALED_STREAM_NAME"]
+```
+
+And if you had defined any `journaled_app_name` methods on `Journaled::Event` instances, you can replace them with the following:
+
+```ruby
+def journaled_stream_name
+  ENV['{{upcase_app_name}}_JOURNALED_STREAM_NAME']
+end
+```
+
+When upgrading from 3.1 or below, `Journaled::DeliveryJob` will handle any jobs that remain in the queue by accepting an `app_name` argument. **This behavior will be removed in version 5.0**, so it is recommended to upgrade one major version at a time.
+
+### Upgrading from 2.5.0
+
+Versions of Journaled prior to 3.0 relied direclty on `delayed_job` and a "performable" class called `Journaled::Delivery`.
+In 3.0, this was superceded by an ActiveJob class called `Journaled::DeliveryJob`, but the `Journaled::Delivery` class was not removed until 4.0.
+
+Therefore, when upgrading from 2.5.0 or below, it is recommended to first upgrade to 3.1.0 (to allow any `Journaled::Delivery` jobs to finish working off) before upgrading to 4.0+.
+
+The upgrade to 3.1.0 will require a working ActiveJob config. ActiveJob can be configured globally by setting `ActiveJob::Base.queue_adapter`, or just for Journaled jobs by setting `Journaled::DeliveryJob.queue_adapter`.
+The `:delayed_job` queue adapter will allow you to continue relying on `delayed_job`. You may also consider switching your app(s) to [`delayed`](https://github.com/Betterment/delayed) and using the `:delayed` queue adapter.
 
 ## Usage
 

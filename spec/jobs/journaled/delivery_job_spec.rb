@@ -5,11 +5,7 @@ RSpec.describe Journaled::DeliveryJob do
   let(:partition_key) { 'fake_partition_key' }
   let(:serialized_event) { '{"foo":"bar"}' }
   let(:kinesis_client) { Aws::Kinesis::Client.new(stub_responses: true) }
-  let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: nil } }
-
-  around do |example|
-    with_env(JOURNALED_STREAM_NAME: stream_name) { example.run }
-  end
+  let(:args) { { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name } }
 
   describe '#perform' do
     let(:return_status_body) { { shard_id: '101', sequence_number: '101123' } }
@@ -19,6 +15,7 @@ RSpec.describe Journaled::DeliveryJob do
       allow(Aws::AssumeRoleCredentials).to receive(:new).and_call_original
       allow(Aws::Kinesis::Client).to receive(:new).and_return kinesis_client
       kinesis_client.stub_responses(:put_record, return_status_body)
+      allow(kinesis_client).to receive(:put_record).and_call_original
 
       allow(Journaled).to receive(:enabled?).and_return(true)
     end
@@ -28,6 +25,11 @@ RSpec.describe Journaled::DeliveryJob do
 
       expect(event.shard_id).to eq '101'
       expect(event.sequence_number).to eq '101123'
+      expect(kinesis_client).to have_received(:put_record).with(
+        stream_name: 'test_events',
+        data: '{"foo":"bar"}',
+        partition_key: 'fake_partition_key',
+      )
     end
 
     context 'when JOURNALED_IAM_ROLE_ARN is defined' do
@@ -68,11 +70,64 @@ RSpec.describe Journaled::DeliveryJob do
       end
     end
 
-    context 'when the stream name env var is NOT set' do
+    context 'when the stream name is not set' do
       let(:stream_name) { nil }
 
       it 'raises an KeyError error' do
-        expect { described_class.perform_now(args) }.to raise_error KeyError
+        expect { described_class.perform_now(args) }.to raise_error ArgumentError, 'missing keyword: stream_name'
+      end
+    end
+
+    unless Gem::Version.new(Journaled::VERSION) < Gem::Version.new('5.0.0')
+      raise <<~MSG
+        Hey! I see that you're bumping the version to 5.0!
+
+        This is a reminder to:
+        - remove the `app_name` argument (and related logic) from `Journaled::DeliveryJob`,
+        - remove the following app_name test contexts, and
+        - make `stream_name` a required kwarg
+
+        Thanks!
+      MSG
+    end
+
+    context 'when the legacy app_name argument is present but nil' do
+      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: nil } }
+
+      around do |example|
+        with_env(JOURNALED_STREAM_NAME: 'legacy_stream_name') { example.run }
+      end
+
+      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
+        event = described_class.perform_now(args)
+
+        expect(event.shard_id).to eq '101'
+        expect(event.sequence_number).to eq '101123'
+        expect(kinesis_client).to have_received(:put_record).with(
+          stream_name: 'legacy_stream_name',
+          data: '{"foo":"bar"}',
+          partition_key: 'fake_partition_key',
+        )
+      end
+    end
+
+    context 'when the legacy app_name argument is present and has a value' do
+      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: 'pied_piper' } }
+
+      around do |example|
+        with_env(PIED_PIPER_JOURNALED_STREAM_NAME: 'pied_piper_events') { example.run }
+      end
+
+      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
+        event = described_class.perform_now(args)
+
+        expect(event.shard_id).to eq '101'
+        expect(event.sequence_number).to eq '101123'
+        expect(kinesis_client).to have_received(:put_record).with(
+          stream_name: 'pied_piper_events',
+          data: '{"foo":"bar"}',
+          partition_key: 'fake_partition_key',
+        )
       end
     end
 
@@ -137,11 +192,11 @@ RSpec.describe Journaled::DeliveryJob do
     end
   end
 
-  describe ".stream_name" do
+  describe ".legacy_computed_stream_name" do
     context "when app_name is unspecified" do
       it "is fetched from a prefixed ENV var if specified" do
         allow(ENV).to receive(:fetch).and_return("expected_stream_name")
-        expect(described_class.stream_name(app_name: nil)).to eq("expected_stream_name")
+        expect(described_class.legacy_computed_stream_name(app_name: nil)).to eq("expected_stream_name")
         expect(ENV).to have_received(:fetch).with("JOURNALED_STREAM_NAME")
       end
     end
@@ -149,7 +204,7 @@ RSpec.describe Journaled::DeliveryJob do
     context "when app_name is specified" do
       it "is fetched from a prefixed ENV var if specified" do
         allow(ENV).to receive(:fetch).and_return("expected_stream_name")
-        expect(described_class.stream_name(app_name: "my_funky_app_name")).to eq("expected_stream_name")
+        expect(described_class.legacy_computed_stream_name(app_name: "my_funky_app_name")).to eq("expected_stream_name")
         expect(ENV).to have_received(:fetch).with("MY_FUNKY_APP_NAME_JOURNALED_STREAM_NAME")
       end
     end
