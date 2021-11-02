@@ -91,7 +91,7 @@ RSpec.describe Journaled::Writer do
 
     context 'when the event complies with the base_event schema' do
       context 'when the specific json schema is NOT valid' do
-        let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: 1 } }
+        let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, tags: {}, foo: 1 } }
 
         it 'raises an error and does not enqueue anything' do
           expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
@@ -100,7 +100,7 @@ RSpec.describe Journaled::Writer do
       end
 
       context 'when the specific json schema is also valid' do
-        let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: :bar } }
+        let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, tags: {}, foo: :bar } }
 
         it 'creates a delivery with the app name passed through' do
           expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)

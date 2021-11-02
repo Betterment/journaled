@@ -19,6 +19,10 @@ module Journaled::Event
     @created_at ||= Time.zone.now
   end
 
+  def tags
+    @tags ||= Journaled.resolve_tags(self)
+  end
+
   # Event metadata and configuration (not serialized)
 
   def journaled_schema_name
@@ -59,6 +63,6 @@ module Journaled::Event
   included do
     cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
 
-    journal_attributes :id, :event_type, :created_at
+    journal_attributes :id, :event_type, :created_at, :tags
   end
 end

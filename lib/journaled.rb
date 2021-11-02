@@ -14,6 +14,7 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
+  mattr_accessor(:default_tags) { {} }
 
   def development_or_test?
     %w(development test).include?(Rails.env)
@@ -48,6 +49,18 @@ module Journaled
 
         Read more at https://github.com/Betterment/journaled
       MSG
+    end
+  end
+
+  def self.resolve_tags(event)
+    default_tags.transform_values do |value|
+      if value.is_a?(Proc)
+        value.arity.zero? ? value.call : value.call(event)
+      elsif value.is_a?(Symbol)
+        event.public_send(value)
+      else
+        value
+      end
     end
   end
 
