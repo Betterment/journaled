@@ -20,7 +20,7 @@ module Journaled::Event
   end
 
   def tags
-    @tags ||= Journaled.resolve_tags(self)
+    @tags ||= Journaled.default_tags
   end
 
   # Event metadata and configuration (not serialized)

@@ -14,7 +14,6 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
-  mattr_accessor(:default_tags) { {} }
 
   def development_or_test?
     %w(development test).include?(Rails.env)
@@ -52,15 +51,11 @@ module Journaled
     end
   end
 
-  def self.resolve_tags(event)
-    default_tags.transform_values do |value|
-      if value.is_a?(Proc)
-        value.arity.zero? ? value.call : value.call(event)
-      elsif value.is_a?(Symbol)
-        event.public_send(value)
-      else
-        value
-      end
+  def self.default_tags(&block)
+    if block_given?
+      @default_tags = block
+    else
+      OpenStruct.new.tap { |struct| @default_tags&.call(struct) }.to_h
     end
   end
 

@@ -135,6 +135,48 @@ RSpec.describe Journaled::Event do
         )
       end
     end
+
+    context 'when default tags are specified' do
+      around do |example|
+        Journaled.default_tags do |t|
+          t.foo = 'bar'
+          t.baz = 'bat'
+        end
+        example.run
+      ensure
+        Journaled.remove_instance_variable('@default_tags')
+      end
+
+      it 'adds them to the journaled attributes' do
+        expect(sample_journaled_event.journaled_attributes).to eq(
+          id: fake_uuid,
+          created_at: frozen_time,
+          event_type: 'some_class_name',
+          tags: { foo: 'bar', baz: 'bat' },
+        )
+      end
+    end
+
+    context 'when custom event tags are specified' do
+      let(:sample_journaled_event_class) do
+        Class.new do
+          include Journaled::Event
+
+          def tags
+            { bananas: 'are great', but_not_actually: 'the best source of potassium' } # it's true
+          end
+        end
+      end
+
+      it 'adds them to the journaled attributes' do
+        expect(sample_journaled_event.journaled_attributes).to eq(
+          id: fake_uuid,
+          created_at: frozen_time,
+          event_type: 'some_class_name',
+          tags: { bananas: 'are great', but_not_actually: 'the best source of potassium' },
+        )
+      end
+    end
   end
 
   describe '#journaled_enqueue_opts, .journaled_enqueue_opts' do
