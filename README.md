@@ -102,6 +102,7 @@ app's Gemfile.
     ```
 
     All journaled events have `tags` fields (defaulting to `{}`), intended for tracing and auditing purposes.
+    This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
 
 ### Upgrading from 3.1.0
 
@@ -203,8 +204,8 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-Your authenticated entity must respond to `#to_global_id`, which
-ActiveRecords do by default.
+Your authenticated entity must respond to `#to_global_id`, which ActiveRecords do by default.
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
 
 Every time any of the specified attributes is modified, or a `User`
 record is created or destroyed, an event will be sent to Kinesis with the following attributes:
