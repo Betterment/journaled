@@ -343,6 +343,12 @@ as described in [Change Journaling](#change-journaling) above.
 
 ## Upgrades
 
+Since this gem relies on background jobs (which can remain in the queue across
+code releases), this gem generally aims to support jobs enqueued by the prior
+gem version.
+
+As such, **we always recommend upgrading only one major version at a time.**
+
 ### Upgrading from 4.0.0
 
 Version 5.0.0 introduces "tagged events," which adds a new `tags` field to all events. As such, you
