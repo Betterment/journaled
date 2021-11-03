@@ -91,15 +91,21 @@ app's Gemfile.
     end
     ```
 
-    If left unspecified, and the
-    [`rails_semantic_logger`](https://github.com/reidmorrison/rails_semantic_logger)
-    gem is installed, this will default to `Rails.logger.named_tags`.
-    Otherwise, this will default to an empty object dictionary.
+    We recommend using `RequestStore` or `ActiveSupport::CurrentAttributes` for
+    thread-safe access to a global singleton, or `rails_semantic_logger` for
+    access to `Rails.logger.named_tags`
 
+    Individual event classes may also have tags overridden or merged:
 
-    If you do not use `semantic_logger`, we recommend using `RequestStore` or
-    `ActiveSupport::CurrentAttributes` for thread-safe access to a global
-    singleton.
+    ```ruby
+    def tags
+      { this_will: 'override the default tags' }
+    end
+
+    def tags
+      super.merge(this_will: 'merge additional tags in with the defaults')
+    end
+    ```
 
 ### Upgrading from 3.1.0
 

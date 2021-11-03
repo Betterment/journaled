@@ -152,12 +152,27 @@ RSpec.describe Journaled::Event do
       end
 
       it 'adds them to the journaled attributes' do
-        expect(sample_journaled_event.journaled_attributes).to eq(
-          id: fake_uuid,
-          created_at: frozen_time,
-          event_type: 'some_class_name',
+        expect(sample_journaled_event.journaled_attributes).to include(
           tags: { foo: 'bar', baz: 'bat' },
         )
+      end
+
+      context 'when custom tags are merged' do
+        let(:sample_journaled_event_class) do
+          Class.new do
+            include Journaled::Event
+
+            def tags
+              super.merge(abc: '123')
+            end
+          end
+        end
+
+        it 'combines all tags' do
+          expect(sample_journaled_event.journaled_attributes).to include(
+            tags: { foo: 'bar', baz: 'bat', abc: '123' },
+          )
+        end
       end
     end
 
@@ -173,10 +188,7 @@ RSpec.describe Journaled::Event do
       end
 
       it 'adds them to the journaled attributes' do
-        expect(sample_journaled_event.journaled_attributes).to eq(
-          id: fake_uuid,
-          created_at: frozen_time,
-          event_type: 'some_class_name',
+        expect(sample_journaled_event.journaled_attributes).to include(
           tags: { bananas: 'are great', but_not_actually: 'the best source of potassium' },
         )
       end
