@@ -86,8 +86,11 @@ app's Gemfile.
 4. Last, but not least, you may (optionally) tag all events with contextual metadata:
 
     ```ruby
-    Journaled.default_tags do |t|
-      t.request_id = ThreadLocalContext.request_id
+    Journaled.default_tags do
+      {
+        request_id: ThreadLocalContext.request_id,
+        session_id: ThreadLocalContext.session_id,
+      }
     end
     ```
 

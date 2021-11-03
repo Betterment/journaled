@@ -55,7 +55,7 @@ module Journaled
     if block_given?
       @default_tags = block
     else
-      OpenStruct.new.tap { |struct| @default_tags&.call(struct) }.to_h
+      @default_tags&.call.to_h
     end
   end
 

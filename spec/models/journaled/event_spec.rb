@@ -141,9 +141,8 @@ RSpec.describe Journaled::Event do
     context 'when default tags are specified' do
       around do |example|
         begin
-          Journaled.default_tags do |t|
-            t.foo = 'bar'
-            t.baz = 'bat'
+          Journaled.default_tags do
+            { foo: 'bar', baz: 'bat' }
           end
           example.run
         ensure
