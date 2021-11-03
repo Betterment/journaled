@@ -144,10 +144,10 @@ RSpec.describe Journaled::ChangeWriter do
 
     context "with journaled default app name set" do
       around do |example|
-        orig_app_name = Journaled.default_stream_name
+        orig_stream_name = Journaled.default_stream_name
         Journaled.default_stream_name = "foo"
         example.run
-        Journaled.default_stream_name = orig_app_name
+        Journaled.default_stream_name = orig_stream_name
       end
 
       it "passes through default" do

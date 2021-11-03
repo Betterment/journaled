@@ -12,26 +12,12 @@ module Journaled
       raise KinesisTemporaryFailure
     end
 
-    UNSPECIFIED = Object.new
-    private_constant :UNSPECIFIED
-
-    def perform(serialized_event:, partition_key:, stream_name: UNSPECIFIED, app_name: UNSPECIFIED)
+    def perform(serialized_event:, partition_key:, stream_name:)
       @serialized_event = serialized_event
       @partition_key = partition_key
-      if app_name != UNSPECIFIED
-        @stream_name = self.class.legacy_computed_stream_name(app_name: app_name)
-      elsif stream_name != UNSPECIFIED && !stream_name.nil?
-        @stream_name = stream_name
-      else
-        raise(ArgumentError, 'missing keyword: stream_name')
-      end
+      @stream_name = stream_name
 
       journal!
-    end
-
-    def self.legacy_computed_stream_name(app_name:)
-      env_var_name = [app_name&.upcase, 'JOURNALED_STREAM_NAME'].compact.join('_')
-      ENV.fetch(env_var_name)
     end
 
     def kinesis_client_config
