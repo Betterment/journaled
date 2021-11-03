@@ -89,7 +89,7 @@ app's Gemfile.
     ```ruby
     class ApplicationController < ActionController::Base
       around_action do |_controller, action|
-        tags = { request_id: request.id, current_user_id: current_user&.id }
+        tags = { request_id: request.request_id, current_user_id: current_user&.id }
         Journaled.tagged(tags) { action.call }
       end
     end
