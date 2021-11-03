@@ -4,6 +4,7 @@ require "json-schema"
 require "request_store"
 
 require "journaled/engine"
+require 'journaled/current'
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
@@ -51,12 +52,12 @@ module Journaled
     end
   end
 
-  def self.default_tags(&block)
-    if block_given?
-      @default_tags = block
-    else
-      @default_tags&.call.to_h
-    end
+  def self.tagged(**tags)
+    existing_tags = Current.tags
+    Current.tags = tags.reverse_merge(existing_tags)
+    yield
+  ensure
+    Current.tags = existing_tags
   end
 
   module_function :development_or_test?, :enabled?, :schema_providers, :commit_hash, :actor_uri, :detect_queue_adapter!

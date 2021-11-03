@@ -8,8 +8,7 @@ class Journaled::ActorUriProvider
   private
 
   def actor_global_id_uri
-    actor = RequestStore.store[:journaled_actor_proc]&.call
-    actor.to_global_id.to_s if actor
+    Journaled::Current.actor&.to_global_id&.to_s
   end
 
   def fallback_global_id_uri

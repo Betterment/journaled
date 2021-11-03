@@ -83,32 +83,25 @@ app's Gemfile.
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
-4. Last, but not least, you may (optionally) tag all events with contextual metadata:
+4. Last, but not least, you may (optionally) set up your base `ApplicationController` and `ApplicationJob` classes
+    to tag events with `tags` metadata:
 
     ```ruby
-    Journaled.default_tags do
-      {
-        request_id: ThreadLocalContext.request_id,
-        session_id: ThreadLocalContext.session_id,
-      }
+    class ApplicationController < ActionController::Base
+      around_action do |_controller, action|
+        tags = { request_id: request.id, current_user_id: current_user&.id }
+        Journaled.tagged(tags) { action.call }
+      end
+    end
+
+    class ApplicationJob < ActiveJob::Base
+      around_perform do |job, perform|
+        Journaled.tagged(job_id: job.id) { perform.call }
+      end
     end
     ```
 
-    We recommend using `RequestStore` or `ActiveSupport::CurrentAttributes` for
-    thread-safe access to a global singleton, or `rails_semantic_logger` for
-    access to `Rails.logger.named_tags`
-
-    Individual event classes may also have tags overridden or merged:
-
-    ```ruby
-    def tags
-      { this_will: 'override the default tags' }
-    end
-
-    def tags
-      super.merge(this_will: 'merge additional tags in with the defaults')
-    end
-    ```
+    All journaled events have `tags` fields (defaulting to `{}`), intended for tracing and auditing purposes.
 
 ### Upgrading from 3.1.0
 
@@ -154,10 +147,6 @@ Journaling provides a number of different configuation options that can be set i
 #### `Journaled.default_stream_name `
 
   This is described in the "Installation" section above, and is used to specify which stream name to use.
-
-#### `Journaled.default_tags`
-
-  This is described in the "Installation" section above, and is used to add contextual metadata to the `tags` attribute.
 
 #### `Journaled.job_priority` (default: 20)
 
@@ -224,7 +213,7 @@ record is created or destroyed, an event will be sent to Kinesis with the follow
   * `event_type` - the constant value `journaled_change`
   * `created_at`- when the event was created
   * `tags` - configurable metadata (e.g. `request_id`, `current_user_id`, etc).
-    See the `Journaled.tags` config above.
+    See the `Journaled.tagged` usage under "Installation"
   * `table_name` - the table name backing the ActiveRecord (e.g. `users`)
   * `record_id` - the primary key of the record, as a string (e.g.
     `"300"`)
