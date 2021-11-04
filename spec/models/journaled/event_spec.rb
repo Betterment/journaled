@@ -137,67 +137,75 @@ RSpec.describe Journaled::Event do
       end
     end
 
-    context 'when tags are specified' do
-      around do |example|
+    context 'tagged: true' do
+      before do
         sample_journaled_event_class.journal_attributes tagged: true
-
-        Journaled.tagged(foo: 'bar', baz: 'bat') { example.run }
       end
 
-      it 'adds them to the journaled attributes' do
-        expect(sample_journaled_event.journaled_attributes).to include(
-          tags: { foo: 'bar', baz: 'bat' },
-        )
+      it 'adds a "tags" attribute' do
+        expect(sample_journaled_event.journaled_attributes).to include(tags: {})
       end
 
-      context 'when even more tags are nested' do
-        it 'merges them in and then resets them' do
-          Journaled.tagged(oh_no: 'even more tags') do
-            expect(sample_journaled_event.journaled_attributes).to include(
-              tags: { foo: 'bar', baz: 'bat', oh_no: 'even more tags' },
-            )
-          end
-
-          allow(SecureRandom).to receive(:uuid).and_return(fake_uuid).once
-          expect(sample_journaled_event_class.new.journaled_attributes).to include(
-            tags: { foo: 'bar', baz: 'bat' },
-          )
-        end
-      end
-
-      context 'when custom event tags are also specified and merged' do
-        let(:sample_journaled_event_class) do
-          Class.new do
-            include Journaled::Event
-
-            def tags
-              super.merge(abc: '123')
-            end
-          end
-        end
-
-        it 'combines all tags' do
-          expect(sample_journaled_event.journaled_attributes).to include(
-            tags: { foo: 'bar', baz: 'bat', abc: '123' },
-          )
-        end
-      end
-
-      context 'when custom event tags are also specified but not merged' do
-        let(:sample_journaled_event_class) do
-          Class.new do
-            include Journaled::Event
-
-            def tags
-              { bananas: 'are great', but_not_actually: 'the best source of potassium' } # it's true
-            end
-          end
+      context 'when tags are specified' do
+        around do |example|
+          Journaled.tagged(foo: 'bar', baz: 'bat') { example.run }
         end
 
         it 'adds them to the journaled attributes' do
           expect(sample_journaled_event.journaled_attributes).to include(
-            tags: { bananas: 'are great', but_not_actually: 'the best source of potassium' },
+            tags: { foo: 'bar', baz: 'bat' },
           )
+        end
+
+        context 'when even more tags are nested' do
+          it 'merges them in and then resets them' do
+            Journaled.tagged(oh_no: 'even more tags') do
+              expect(sample_journaled_event.journaled_attributes).to include(
+                tags: { foo: 'bar', baz: 'bat', oh_no: 'even more tags' },
+              )
+            end
+
+            allow(SecureRandom).to receive(:uuid).and_return(fake_uuid).once
+            expect(sample_journaled_event_class.new.journaled_attributes).to include(
+              tags: { foo: 'bar', baz: 'bat' },
+            )
+          end
+        end
+
+        context 'when custom event tags are also specified and merged' do
+          let(:sample_journaled_event_class) do
+            Class.new do
+              include Journaled::Event
+
+              def tags
+                super.merge(abc: '123')
+              end
+            end
+          end
+
+          it 'combines all tags' do
+            expect(sample_journaled_event.journaled_attributes).to include(
+              tags: { foo: 'bar', baz: 'bat', abc: '123' },
+            )
+          end
+        end
+
+        context 'when custom event tags are also specified but not merged' do
+          let(:sample_journaled_event_class) do
+            Class.new do
+              include Journaled::Event
+
+              def tags
+                { bananas: 'are great', but_not_actually: 'the best source of potassium' } # it's true
+              end
+            end
+          end
+
+          it 'adds them to the journaled attributes' do
+            expect(sample_journaled_event.journaled_attributes).to include(
+              tags: { bananas: 'are great', but_not_actually: 'the best source of potassium' },
+            )
+          end
         end
       end
     end
