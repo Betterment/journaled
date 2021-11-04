@@ -192,14 +192,14 @@ class MyEvent
 end
 ```
 
-You may then use `Journaled.tagged` inside of your `ApplicationController` and `ApplicationJob`
-classes to tag all events with request and job metadata:
+You may then use `Journaled.tag!` and `Journaled.tagged` inside of your
+`ApplicationController` and `ApplicationJob` classes (or anywhere else!) to tag
+all events with request and job metadata:
 
 ```ruby
 class ApplicationController < ActionController::Base
-  around_action do |_controller, action|
-    tags = { request_id: request.request_id, current_user_id: current_user&.id }
-    Journaled.tagged(tags) { action.call }
+  before_action do
+    Journaled.tag!(request_id: request.request_id, current_user_id: current_user&.id)
   end
 end
 
@@ -208,12 +208,6 @@ class ApplicationJob < ActiveJob::Base
     Journaled.tagged(job_id: job.id) { perform.call }
   end
 end
-```
-
-Alternatively, you may set tags directly, without a block:
-
-```ruby
-Journaled.tag!(whodunnit: "gid://local/#{`whoami`.strip}")
 ```
 
 This feature relies on `ActiveSupport::CurrentAttributes` under the hood, so these tags are local to
