@@ -3,7 +3,7 @@ require "active_job"
 require "json-schema"
 
 require "journaled/engine"
-require 'journaled/current'
+require "journaled/current"
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
