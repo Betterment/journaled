@@ -85,27 +85,6 @@ app's Gemfile.
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
-4. Last, but not least, you may (optionally) set up your base `ApplicationController` and `ApplicationJob` classes
-    to tag events with `tags` metadata:
-
-    ```ruby
-    class ApplicationController < ActionController::Base
-      around_action do |_controller, action|
-        tags = { request_id: request.request_id, current_user_id: current_user&.id }
-        Journaled.tagged(tags) { action.call }
-      end
-    end
-
-    class ApplicationJob < ActiveJob::Base
-      around_perform do |job, perform|
-        Journaled.tagged(job_id: job.id) { perform.call }
-      end
-    end
-    ```
-
-    All journaled events have `tags` fields (defaulting to `{}`), intended for tracing and auditing purposes.
-    This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
-
 ## Usage
 
 ### Configuration
@@ -180,8 +159,6 @@ record is created or destroyed, an event will be sent to Kinesis with the follow
   * `id` - a random event-specific UUID
   * `event_type` - the constant value `journaled_change`
   * `created_at`- when the event was created
-  * `tags` - configurable metadata (e.g. `request_id`, `current_user_id`, etc).
-    See the `Journaled.tagged` usage under "Installation"
   * `table_name` - the table name backing the ActiveRecord (e.g. `users`)
   * `record_id` - the primary key of the record, as a string (e.g.
     `"300"`)
@@ -201,6 +178,46 @@ additional `force: true` argument if they would interfere with change
 journaling. Note that the less-frequently-used methods `toggle`,
 `increment*`, `decrement*`, and `update_counters` are not intercepted at
 this time.
+
+### Tagged Events
+
+Events may be optionally marked as "tagged." This will add a `tags` field, intended for tracing and
+auditing purposes.
+
+```ruby
+class MyEvent
+  include Journaled::Event
+
+  journal_attributes :attr_1, :attr_2, tagged: true
+end
+```
+
+You may then use `Journaled.tagged` inside of your `ApplicationController` and `ApplicationJob`
+classes to tag all events with request and job metadata:
+
+```ruby
+class ApplicationController < ActionController::Base
+  around_action do |_controller, action|
+    tags = { request_id: request.request_id, current_user_id: current_user&.id }
+    Journaled.tagged(tags) { action.call }
+  end
+end
+
+class ApplicationJob < ActiveJob::Base
+  around_perform do |job, perform|
+    Journaled.tagged(job_id: job.id) { perform.call }
+  end
+end
+```
+
+Alternatively, you may set tags directly, without a block:
+
+```ruby
+Journaled.tag!(whodunnit: "gid://local/#{`whoami`.strip}")
+```
+
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood, so these tags are local to
+the current thread, and will be cleared at the end of each request request/job.
 
 #### Testing
 
@@ -348,23 +365,6 @@ code releases), this gem generally aims to support jobs enqueued by the prior
 gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
-
-### Upgrading from 4.0.0
-
-Version 5.0.0 introduces "tagged events," which adds a new `tags` field to all events. As such, you
-will need to update your JSON schemas (`journaled_schemas/event_name.json`) to include this field:
-
-```json
-  "properties": {
-    ...
-    "tags": {
-      "type": "object",
-      "additionalProperties": true
-    }
-  }
-```
-
-To make use of this feature, see step 4 under ["Installation"](#installation) above!
 
 ### Upgrading from 3.1.0
 

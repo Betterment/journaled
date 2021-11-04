@@ -89,9 +89,9 @@ RSpec.describe Journaled::Event do
     context 'when no additional attributes have been defined' do
       it 'returns the base attributes, and memoizes them after the first call' do
         expect(sample_journaled_event.journaled_attributes)
-          .to eq id: fake_uuid, created_at: frozen_time, event_type: 'some_class_name', tags: {}
+          .to eq id: fake_uuid, created_at: frozen_time, event_type: 'some_class_name'
         expect(sample_journaled_event.journaled_attributes)
-          .to eq id: fake_uuid, created_at: frozen_time, event_type: 'some_class_name', tags: {}
+          .to eq id: fake_uuid, created_at: frozen_time, event_type: 'some_class_name'
       end
     end
 
@@ -133,13 +133,14 @@ RSpec.describe Journaled::Event do
           event_type: 'some_class_name',
           foo: 'foo_return',
           bar: 'bar_return',
-          tags: {},
         )
       end
     end
 
     context 'when tags are specified' do
       around do |example|
+        sample_journaled_event_class.journal_attributes tagged: true
+
         Journaled.tagged(foo: 'bar', baz: 'bat') { example.run }
       end
 

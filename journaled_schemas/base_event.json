@@ -5,8 +5,7 @@
   "required": [
     "id",
     "event_type",
-    "created_at",
-    "tags"
+    "created_at"
   ],
   "properties": {
     "id": {
@@ -17,10 +16,6 @@
     },
     "created_at": {
       "type": "string"
-    },
-    "tags": {
-      "type": "object",
-      "additionalProperties": true
     }
   }
 }

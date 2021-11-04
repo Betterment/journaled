@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "title": "tagged_event",
+  "additionalProperties": true,
+  "required": [
+    "tags"
+  ],
+  "properties": {
+    "tags": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

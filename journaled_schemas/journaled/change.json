@@ -6,7 +6,6 @@
     "id",
     "event_type",
     "created_at",
-    "tags",
     "table_name",
     "record_id",
     "database_operation",
@@ -23,10 +22,6 @@
     },
     "created_at": {
       "type": "string"
-    },
-    "tags": {
-      "type": "object",
-      "additionalProperties": true
     },
     "table_name": {
       "type": "string"

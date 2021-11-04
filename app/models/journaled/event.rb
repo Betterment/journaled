@@ -19,10 +19,6 @@ module Journaled::Event
     @created_at ||= Time.zone.now
   end
 
-  def tags
-    Journaled::Current.tags
-  end
-
   # Event metadata and configuration (not serialized)
 
   def journaled_schema_name
@@ -43,12 +39,18 @@ module Journaled::Event
     Journaled.default_stream_name
   end
 
+  def tagged?
+    false
+  end
+
   private
 
   class_methods do
-    def journal_attributes(*args, enqueue_with: {})
+    def journal_attributes(*args, enqueue_with: {}, tagged: false)
       journaled_attributes.concat(args)
       journaled_enqueue_opts.merge!(enqueue_with)
+
+      include Tagged if tagged
     end
 
     def journaled_attributes
@@ -63,6 +65,22 @@ module Journaled::Event
   included do
     cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
 
-    journal_attributes :id, :event_type, :created_at, :tags
+    journal_attributes :id, :event_type, :created_at
+  end
+
+  module Tagged
+    extend ActiveSupport::Concern
+
+    included do
+      journaled_attributes << :tags
+    end
+
+    def tags
+      Journaled::Current.tags
+    end
+
+    def tagged?
+      true
+    end
   end
 end
