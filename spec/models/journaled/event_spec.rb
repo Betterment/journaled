@@ -148,7 +148,8 @@ RSpec.describe Journaled::Event do
 
       context 'when tags are specified' do
         around do |example|
-          Journaled.tagged(foo: 'bar', baz: 'bat') { example.run }
+          Journaled.tag!(foo: 'bar')
+          Journaled.tagged(baz: 'bat') { example.run }
         end
 
         it 'adds them to the journaled attributes' do

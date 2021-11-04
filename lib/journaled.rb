@@ -53,10 +53,14 @@ module Journaled
 
   def self.tagged(**tags)
     existing_tags = Current.tags
-    Current.tags = tags.reverse_merge(existing_tags)
+    tag!(tags)
     yield
   ensure
     Current.tags = existing_tags
+  end
+
+  def self.tag!(**tags)
+    Current.tags = Current.tags.merge(tags)
   end
 
   module_function :development_or_test?, :enabled?, :schema_providers, :commit_hash, :actor_uri, :detect_queue_adapter!
