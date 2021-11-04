@@ -1,9 +1,9 @@
 require "aws-sdk-kinesis"
 require "active_job"
 require "json-schema"
-require "request_store"
 
 require "journaled/engine"
+require "journaled/current"
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
@@ -49,6 +49,18 @@ module Journaled
         Read more at https://github.com/Betterment/journaled
       MSG
     end
+  end
+
+  def self.tagged(**tags)
+    existing_tags = Current.tags
+    tag!(tags)
+    yield
+  ensure
+    Current.tags = existing_tags
+  end
+
+  def self.tag!(**tags)
+    Current.tags = Current.tags.merge(tags)
   end
 
   module_function :development_or_test?, :enabled?, :schema_providers, :commit_hash, :actor_uri, :detect_queue_adapter!

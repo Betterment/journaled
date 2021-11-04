@@ -2,11 +2,14 @@ module Journaled::Actor
   extend ActiveSupport::Concern
 
   included do
-    class_attribute :_journaled_actor_method_name, instance_accessor: false, instance_predicate: false
-    before_action do
-      RequestStore.store[:journaled_actor_proc] = self.class._journaled_actor_method_name &&
-        -> { send(self.class._journaled_actor_method_name) }
-    end
+    class_attribute :_journaled_actor_method_name, instance_writer: false
+    before_action :_set_journaled_actor_proc, if: :_journaled_actor_method_name?
+  end
+
+  private
+
+  def _set_journaled_actor_proc
+    Journaled::Current.journaled_actor_proc = -> { send(self.class._journaled_actor_method_name) }
   end
 
   class_methods do

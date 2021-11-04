@@ -18,6 +18,8 @@ add scoped ordering capability at a future date (and would gladly
 entertain pull requests), but it is presently only designed to provide a
 durable, eventually consistent record that discrete events happened.
 
+**See [upgrades](#upgrades) below if you're upgrading from an older `journaled` version!**
+
 ## Installation
 
 1. If you haven't already,
@@ -83,52 +85,15 @@ app's Gemfile.
 
     The AWS principal whose credentials are in the environment will need to be allowed to assume this role.
 
-### Upgrading from 3.1.0
-
-Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
-When upgrading, you can use the following configuration to maintain the previous behavior:
-
-```ruby
-Journaled.default_stream_name = ENV['JOURNALED_STREAM_NAME']
-```
-
-If you previously specified a `Journaled.default_app_name`, you would have required a more precise environment variable name (substitute `{{upcase_app_name}}`):
-
-```ruby
-Journaled.default_stream_name = ENV["{{upcase_app_name}}_JOURNALED_STREAM_NAME"]
-```
-
-And if you had defined any `journaled_app_name` methods on `Journaled::Event` instances, you can replace them with the following:
-
-```ruby
-def journaled_stream_name
-  ENV['{{upcase_app_name}}_JOURNALED_STREAM_NAME']
-end
-```
-
-When upgrading from 3.1 or below, `Journaled::DeliveryJob` will handle any jobs that remain in the queue by accepting an `app_name` argument. **This behavior will be removed in version 5.0**, so it is recommended to upgrade one major version at a time.
-
-### Upgrading from 2.5.0
-
-Versions of Journaled prior to 3.0 relied direclty on `delayed_job` and a "performable" class called `Journaled::Delivery`.
-In 3.0, this was superceded by an ActiveJob class called `Journaled::DeliveryJob`, but the `Journaled::Delivery` class was not removed until 4.0.
-
-Therefore, when upgrading from 2.5.0 or below, it is recommended to first upgrade to 3.1.0 (to allow any `Journaled::Delivery` jobs to finish working off) before upgrading to 4.0+.
-
-The upgrade to 3.1.0 will require a working ActiveJob config. ActiveJob can be configured globally by setting `ActiveJob::Base.queue_adapter`, or just for Journaled jobs by setting `Journaled::DeliveryJob.queue_adapter`.
-The `:delayed_job` queue adapter will allow you to continue relying on `delayed_job`. You may also consider switching your app(s) to [`delayed`](https://github.com/Betterment/delayed) and using the `:delayed` queue adapter.
-
 ## Usage
 
 ### Configuration
 
 Journaling provides a number of different configuation options that can be set in Ruby using an initializer. Those values are:
 
-#### `Journaled.default_app_name`
+#### `Journaled.default_stream_name `
 
-  This is described in the proceeding paragraph and is used to specify which app name to use, which corresponds to which Journaled Stream to send events too.
-  This is the default value for events that do NOT specify their own `#journaled_app_name`. For events that define their own `#journaled_app_name` method, that will take precedence over this default.
-  Ex: `Journaled.default_app_name = 'my_app'`
+  This is described in the "Installation" section above, and is used to specify which stream name to use.
 
 #### `Journaled.job_priority` (default: 20)
 
@@ -185,8 +150,8 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-Your authenticated entity must respond to `#to_global_id`, which
-ActiveRecords do by default.
+Your authenticated entity must respond to `#to_global_id`, which ActiveRecords do by default.
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
 
 Every time any of the specified attributes is modified, or a `User`
 record is created or destroyed, an event will be sent to Kinesis with the following attributes:
@@ -213,6 +178,40 @@ additional `force: true` argument if they would interfere with change
 journaling. Note that the less-frequently-used methods `toggle`,
 `increment*`, `decrement*`, and `update_counters` are not intercepted at
 this time.
+
+### Tagged Events
+
+Events may be optionally marked as "tagged." This will add a `tags` field, intended for tracing and
+auditing purposes.
+
+```ruby
+class MyEvent
+  include Journaled::Event
+
+  journal_attributes :attr_1, :attr_2, tagged: true
+end
+```
+
+You may then use `Journaled.tag!` and `Journaled.tagged` inside of your
+`ApplicationController` and `ApplicationJob` classes (or anywhere else!) to tag
+all events with request and job metadata:
+
+```ruby
+class ApplicationController < ActionController::Base
+  before_action do
+    Journaled.tag!(request_id: request.request_id, current_user_id: current_user&.id)
+  end
+end
+
+class ApplicationJob < ActiveJob::Base
+  around_perform do |job, perform|
+    Journaled.tagged(job_id: job.id) { perform.call }
+  end
+end
+```
+
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood, so these tags are local to
+the current thread, and will be cleared at the end of each request request/job.
 
 #### Testing
 
@@ -352,6 +351,49 @@ Returns one of the following in order of preference:
 
 In order for this to be most useful, you must configure your controller
 as described in [Change Journaling](#change-journaling) above.
+
+## Upgrades
+
+Since this gem relies on background jobs (which can remain in the queue across
+code releases), this gem generally aims to support jobs enqueued by the prior
+gem version.
+
+As such, **we always recommend upgrading only one major version at a time.**
+
+### Upgrading from 3.1.0
+
+Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
+When upgrading, you can use the following configuration to maintain the previous behavior:
+
+```ruby
+Journaled.default_stream_name = ENV['JOURNALED_STREAM_NAME']
+```
+
+If you previously specified a `Journaled.default_app_name`, you would have required a more precise environment variable name (substitute `{{upcase_app_name}}`):
+
+```ruby
+Journaled.default_stream_name = ENV["{{upcase_app_name}}_JOURNALED_STREAM_NAME"]
+```
+
+And if you had defined any `journaled_app_name` methods on `Journaled::Event` instances, you can replace them with the following:
+
+```ruby
+def journaled_stream_name
+  ENV['{{upcase_app_name}}_JOURNALED_STREAM_NAME']
+end
+```
+
+When upgrading from 3.1 or below, `Journaled::DeliveryJob` will handle any jobs that remain in the queue by accepting an `app_name` argument. **This behavior will be removed in version 5.0**, so it is recommended to upgrade one major version at a time.
+
+### Upgrading from 2.5.0
+
+Versions of Journaled prior to 3.0 relied direclty on `delayed_job` and a "performable" class called `Journaled::Delivery`.
+In 3.0, this was superceded by an ActiveJob class called `Journaled::DeliveryJob`, but the `Journaled::Delivery` class was not removed until 4.0.
+
+Therefore, when upgrading from 2.5.0 or below, it is recommended to first upgrade to 3.1.0 (to allow any `Journaled::Delivery` jobs to finish working off) before upgrading to 4.0+.
+
+The upgrade to 3.1.0 will require a working ActiveJob config. ActiveJob can be configured globally by setting `ActiveJob::Base.queue_adapter`, or just for Journaled jobs by setting `Journaled::DeliveryJob.queue_adapter`.
+The `:delayed_job` queue adapter will allow you to continue relying on `delayed_job`. You may also consider switching your app(s) to [`delayed`](https://github.com/Betterment/delayed) and using the `:delayed` queue adapter.
 
 ## Future improvements & issue tracking
 Suggestions for enhancements to this engine are currently being tracked via Github Issues. Please feel free to open an

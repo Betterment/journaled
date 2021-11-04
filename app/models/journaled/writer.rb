@@ -25,8 +25,7 @@ class Journaled::Writer
   end
 
   def journal!
-    base_event_json_schema_validator.validate! serialized_event
-    json_schema_validator.validate! serialized_event
+    validate!
     Journaled::DeliveryJob
       .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
       .perform_later(delivery_perform_args)
@@ -36,6 +35,12 @@ class Journaled::Writer
 
   attr_reader :journaled_event
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
+
+  def validate!
+    schema_validator('base_event').validate! serialized_event
+    schema_validator('tagged_event').validate! serialized_event if journaled_event.tagged?
+    schema_validator(journaled_schema_name).validate! serialized_event
+  end
 
   def delivery_perform_args
     {
@@ -49,12 +54,8 @@ class Journaled::Writer
     @serialized_event ||= journaled_attributes.to_json
   end
 
-  def json_schema_validator
-    @json_schema_validator ||= Journaled::JsonSchemaModel::Validator.new(journaled_schema_name)
-  end
-
-  def base_event_json_schema_validator
-    @base_event_json_schema_validator ||= Journaled::JsonSchemaModel::Validator.new('base_event')
+  def schema_validator(schema_name)
+    Journaled::JsonSchemaModel::Validator.new(schema_name)
   end
 
   def respond_to_all?(object, method_names)

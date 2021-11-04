@@ -77,6 +77,7 @@ RSpec.describe Journaled::Writer do
         journaled_partition_key: 'fake_partition_key',
         journaled_stream_name: 'my_app_events',
         journaled_enqueue_opts: journaled_enqueue_opts,
+        tagged?: false,
       )
     end
 
@@ -138,6 +139,34 @@ RSpec.describe Journaled::Writer do
               end
             }.from(0).to(1)
           end
+        end
+      end
+    end
+
+    context 'when the event is tagged' do
+      before do
+        allow(journaled_event).to receive(:tagged?).and_return(true)
+      end
+
+      context 'and the "tags" attribute is not present' do
+        let(:journaled_event_attributes) do
+          { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: 'bar' }
+        end
+
+        it 'raises an error and does not enqueue anything' do
+          expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+          expect(enqueued_jobs.count).to eq 0
+        end
+      end
+
+      context 'and the "tags" attribute is present' do
+        let(:journaled_event_attributes) do
+          { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: 'bar', tags: { baz: 'bat' } }
+        end
+
+        it 'creates a delivery with the app name passed through' do
+          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
       end
     end
