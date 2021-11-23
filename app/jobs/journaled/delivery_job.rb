@@ -15,8 +15,20 @@ module Journaled
     UNSPECIFIED = Object.new
     private_constant :UNSPECIFIED
 
-    def perform(serialized_event:, partition_key:, stream_name: UNSPECIFIED, app_name: UNSPECIFIED)
-      @serialized_event = serialized_event
+    def perform( # rubocop:disable Metrics/PerceivedComplexity
+      partition_key:,
+      serialized_events: UNSPECIFIED,
+      serialized_event: UNSPECIFIED,
+      stream_name: UNSPECIFIED,
+      app_name: UNSPECIFIED
+    )
+      if serialized_event != UNSPECIFIED
+        @serialized_events = [serialized_event].flatten(1)
+      elsif serialized_events != UNSPECIFIED
+        @serialized_events = serialized_events
+      else
+        raise(ArgumentError, 'missing keyword: serialized_events')
+      end
       @partition_key = partition_key
       if app_name != UNSPECIFIED
         @stream_name = self.class.legacy_computed_stream_name(app_name: app_name)
@@ -46,16 +58,18 @@ module Journaled
 
     private
 
-    attr_reader :serialized_event, :partition_key, :stream_name
+    attr_reader :serialized_events, :partition_key, :stream_name
 
     def journal!
-      kinesis_client.put_record record if Journaled.enabled?
+      serialized_events.map do |event|
+        kinesis_client.put_record record(event) if Journaled.enabled?
+      end
     end
 
-    def record
+    def record(event)
       {
         stream_name: stream_name,
-        data: serialized_event,
+        data: event,
         partition_key: partition_key,
       }
     end

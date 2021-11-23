@@ -21,8 +21,10 @@ RSpec.describe Journaled::DeliveryJob do
     end
 
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-      event = described_class.perform_now(**args)
+      events = described_class.perform_now(**args)
+      expect(events.count).to eq 1
 
+      event = events.first
       expect(event.shard_id).to eq '101'
       expect(event.sequence_number).to eq '101123'
       expect(kinesis_client).to have_received(:put_record).with(
@@ -99,8 +101,10 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        event = described_class.perform_now(**args)
+        events = described_class.perform_now(**args)
+        expect(events.count).to eq 1
 
+        event = events.first
         expect(event.shard_id).to eq '101'
         expect(event.sequence_number).to eq '101123'
         expect(kinesis_client).to have_received(:put_record).with(
@@ -119,8 +123,10 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        event = described_class.perform_now(**args)
+        events = described_class.perform_now(**args)
+        expect(events.count).to eq 1
 
+        event = events.first
         expect(event.shard_id).to eq '101'
         expect(event.sequence_number).to eq '101123'
         expect(kinesis_client).to have_received(:put_record).with(
