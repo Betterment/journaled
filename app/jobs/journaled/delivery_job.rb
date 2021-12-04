@@ -23,7 +23,7 @@ module Journaled
       app_name: UNSPECIFIED
     )
       if serialized_event != UNSPECIFIED
-        @serialized_events = [serialized_event].flatten(1)
+        @serialized_events = [serialized_event]
       elsif serialized_events != UNSPECIFIED
         @serialized_events = serialized_events
       else
@@ -66,10 +66,10 @@ module Journaled
       end
     end
 
-    def record(event)
+    def record(serialized_event)
       {
         stream_name: stream_name,
-        data: event,
+        data: serialized_event,
         partition_key: partition_key,
       }
     end

@@ -22,11 +22,10 @@ RSpec.describe Journaled::DeliveryJob do
 
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
       events = described_class.perform_now(**args)
-      expect(events.count).to eq 1
 
-      event = events.first
-      expect(event.shard_id).to eq '101'
-      expect(event.sequence_number).to eq '101123'
+      expect(events.count).to eq 1
+      expect(events.first.shard_id).to eq '101'
+      expect(events.first.sequence_number).to eq '101123'
       expect(kinesis_client).to have_received(:put_record).with(
         stream_name: 'test_events',
         data: '{"foo":"bar"}',
@@ -102,11 +101,10 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
         events = described_class.perform_now(**args)
-        expect(events.count).to eq 1
 
-        event = events.first
-        expect(event.shard_id).to eq '101'
-        expect(event.sequence_number).to eq '101123'
+        expect(events.count).to eq 1
+        expect(events.first.shard_id).to eq '101'
+        expect(events.first.sequence_number).to eq '101123'
         expect(kinesis_client).to have_received(:put_record).with(
           stream_name: 'legacy_stream_name',
           data: '{"foo":"bar"}',
@@ -124,11 +122,10 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
         events = described_class.perform_now(**args)
-        expect(events.count).to eq 1
 
-        event = events.first
-        expect(event.shard_id).to eq '101'
-        expect(event.sequence_number).to eq '101123'
+        expect(events.count).to eq 1
+        expect(events.first.shard_id).to eq '101'
+        expect(events.first.sequence_number).to eq '101123'
         expect(kinesis_client).to have_received(:put_record).with(
           stream_name: 'pied_piper_events',
           data: '{"foo":"bar"}',
