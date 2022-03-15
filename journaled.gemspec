@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   s.add_dependency "json-schema"
   s.add_dependency "railties", ">= 5.2"
 
-  s.add_development_dependency "appraisal", "~> 2.2.0"
+  s.add_development_dependency "appraisal"
   s.add_development_dependency "betterlint"
   s.add_development_dependency "rspec_junit_formatter"
   s.add_development_dependency "rspec-rails"
@@ -33,5 +33,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "spring-commands-rspec"
   s.add_development_dependency "sqlite3"
   s.add_development_dependency "timecop"
+  s.add_development_dependency "uncruft"
   s.add_development_dependency "webmock"
 end
