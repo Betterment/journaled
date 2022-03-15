@@ -21,7 +21,7 @@ RSpec.describe Journaled::DeliveryJob do
     end
 
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-      event = described_class.perform_now(args)
+      event = described_class.perform_now(**args)
 
       expect(event.shard_id).to eq '101'
       expect(event.sequence_number).to eq '101123'
@@ -60,7 +60,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'initializes a Kinesis client with assume role credentials' do
-        described_class.perform_now(args)
+        described_class.perform_now(**args)
 
         expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
           client: aws_sts_client,
@@ -74,7 +74,7 @@ RSpec.describe Journaled::DeliveryJob do
       let(:stream_name) { nil }
 
       it 'raises an KeyError error' do
-        expect { described_class.perform_now(args) }.to raise_error ArgumentError, 'missing keyword: stream_name'
+        expect { described_class.perform_now(**args) }.to raise_error ArgumentError, 'missing keyword: stream_name'
       end
     end
 
@@ -99,7 +99,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        event = described_class.perform_now(args)
+        event = described_class.perform_now(**args)
 
         expect(event.shard_id).to eq '101'
         expect(event.sequence_number).to eq '101123'
@@ -119,7 +119,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        event = described_class.perform_now(args)
+        event = described_class.perform_now(**args)
 
         expect(event.shard_id).to eq '101'
         expect(event.sequence_number).to eq '101123'
@@ -138,7 +138,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(
           "Kinesis Error - Server Error occurred - Aws::Kinesis::Errors::InternalFailure",
         ).once
@@ -152,7 +152,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(/\AKinesis Error/).once
       end
     end
@@ -163,7 +163,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'raises an error that subclasses Aws::Kinesis::Errors::ServiceError' do
-        expect { described_class.perform_now(args) }.to raise_error Aws::Kinesis::Errors::ServiceError
+        expect { described_class.perform_now(**args) }.to raise_error Aws::Kinesis::Errors::ServiceError
       end
     end
 
@@ -173,7 +173,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'raises an AccessDeniedException error' do
-        expect { described_class.perform_now(args) }.to raise_error Aws::Kinesis::Errors::AccessDeniedException
+        expect { described_class.perform_now(**args) }.to raise_error Aws::Kinesis::Errors::AccessDeniedException
       end
     end
 
@@ -184,7 +184,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(
           "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError",
         ).once

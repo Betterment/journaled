@@ -53,7 +53,7 @@ module Journaled
 
   def self.tagged(**tags)
     existing_tags = Current.tags
-    tag!(tags)
+    tag!(**tags)
     yield
   ensure
     Current.tags = existing_tags
