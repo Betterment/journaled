@@ -17,6 +17,8 @@ Gem::Specification.new do |s|
   s.files = Dir["{app,config,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
   s.test_files = Dir["spec/**/*"]
 
+  s.required_ruby_version = ">= 2.6"
+
   s.add_dependency "activejob"
   s.add_dependency "activerecord"
   s.add_dependency "aws-sdk-kinesis", "< 2"
@@ -24,9 +26,9 @@ Gem::Specification.new do |s|
   s.add_dependency "railties", ">= 5.2"
 
   s.add_development_dependency "appraisal", "~> 2.2.0"
-  s.add_development_dependency "rspec-rails"
+  s.add_development_dependency "betterlint"
   s.add_development_dependency "rspec_junit_formatter"
-  s.add_development_dependency "rubocop-betterment", "~> 1.3"
+  s.add_development_dependency "rspec-rails"
   s.add_development_dependency "spring"
   s.add_development_dependency "spring-commands-rspec"
   s.add_development_dependency "sqlite3"
