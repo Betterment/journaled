@@ -1,6 +1,6 @@
 module Journaled::RelationChangeProtection
-  def update_all(updates, force: false) # rubocop:disable Metrics/AbcSize
-    unless force || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?
+  def update_all(updates, opts = { force: false }) # rubocop:disable Metrics/AbcSize
+    unless opts[:force] || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?
       conflicting_journaled_attribute_names = case updates
                                                 when Hash
                                                   @klass.journaled_attribute_names & updates.keys.map(&:to_sym)
