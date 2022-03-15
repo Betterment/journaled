@@ -8,7 +8,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
     let(:attributes_to_validate) do
       {
         some_string: some_string_value,
-        some_decimal: 0.1.to_d,
+        some_decimal: BigDecimal('0.1'),
         some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
         some_int: some_int_value,
         some_optional_string: some_optional_string_value,
@@ -66,7 +66,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
       context 'when all the required fields are provided' do
         context 'when all the fields are provided' do
           it 'is valid' do
-            expect(subject.validate!(json_to_validate)).to eq true
+            expect(subject.validate!(json_to_validate)).to be true
           end
         end
 
@@ -74,7 +74,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
           let(:attributes_to_validate) do
             {
               some_string: some_string_value,
-              some_decimal: 0.1.to_d,
+              some_decimal: BigDecimal('0.1'),
               some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
               some_int: some_int_value,
               some_nullable_field: some_nullable_field,
@@ -82,7 +82,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
           end
 
           it 'is valid' do
-            expect(subject.validate!(json_to_validate)).to eq true
+            expect(subject.validate!(json_to_validate)).to be true
           end
         end
 
@@ -90,7 +90,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
           let(:some_nullable_optional_field) { nil }
 
           it 'is valid' do
-            expect(subject.validate!(json_to_validate)).to eq true
+            expect(subject.validate!(json_to_validate)).to be true
           end
         end
 
@@ -107,7 +107,7 @@ RSpec.describe Journaled::JsonSchemaModel::Validator do
         let(:attributes_to_validate) do
           {
             some_string: some_string_value,
-            some_decimal: 0.1.to_d,
+            some_decimal: BigDecimal('0.1'),
             some_time: Time.zone.parse('2017-01-20 15:16:17 -05:00'),
           }
         end

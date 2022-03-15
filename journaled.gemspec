@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
   s.summary     = "Journaling for Betterment apps."
   s.description = "A Rails engine to durably deliver schematized events to Amazon Kinesis via DelayedJob."
   s.license     = "MIT"
+  s.metadata['rubygems_mfa_required'] = 'true'
 
   s.files = Dir["{app,config,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
   s.test_files = Dir["spec/**/*"]
