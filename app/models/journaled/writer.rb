@@ -26,9 +26,9 @@ class Journaled::Writer
 
   def journal!
     validate!
-    Journaled::DeliveryJob
-      .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
-      .perform_later(**delivery_perform_args)
+    stage!
+    enqueue! # before commit
+    clear! # after commit
   end
 
   private
@@ -43,16 +43,30 @@ class Journaled::Writer
     schema_validator(journaled_schema_name).validate! serialized_event
   end
 
-  def delivery_perform_args
-    {
-      serialized_event: serialized_event,
-      partition_key: journaled_partition_key,
-      stream_name: journaled_stream_name,
-    }
+  def stage!
+    Journaled::Current.pending_events << journaled_event
   end
 
-  def serialized_event
-    @serialized_event ||= journaled_attributes.to_json
+  def flush!
+    Journaled::Current.pending_events.group(&:journaled_enqueue_opts).each do |enqueue_opts, events|
+      Journaled::DeliveryJob
+        .set(enqueue_opts.reverse_merge(priority: Journaled.job_priority))
+        .perform_later(**delivery_perform_args(events))
+    end
+  end
+
+  def clear!
+    Journaled::Curent.pending_events.clear
+  end
+
+  def delivery_perform_args(events)
+    events.map do |e|
+      {
+        serialized_event: e.journaled_attributes.to_json,
+        partition_key: e.journaled_partition_key,
+        stream_name: e.journaled_stream_name,
+      }
+    end
   end
 
   def schema_validator(schema_name)

@@ -15,35 +15,19 @@ module Journaled
     UNSPECIFIED = Object.new
     private_constant :UNSPECIFIED
 
-    def perform( # rubocop:disable Metrics/PerceivedComplexity
-      partition_key:,
-      serialized_events: UNSPECIFIED,
-      serialized_event: UNSPECIFIED,
-      stream_name: UNSPECIFIED,
-      app_name: UNSPECIFIED
-    )
-      if serialized_event != UNSPECIFIED
-        @serialized_events = [serialized_event]
-      elsif serialized_events != UNSPECIFIED
-        @serialized_events = serialized_events
+    def perform(*events,
+                serialized_event: UNSPECIFIED,
+                partition_key: UNSPECIFIED,
+                stream_name: UNSPECIFIED)
+      if events != []
+        @events = events
+      elsif serialized_event != UNSPECIFIED && partition_key != UNSPECIFIED && stream_name != UNSPECIFIED
+        @events = [{ serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }]
       else
-        raise(ArgumentError, 'missing keyword: serialized_events')
-      end
-      @partition_key = partition_key
-      if app_name != UNSPECIFIED
-        @stream_name = self.class.legacy_computed_stream_name(app_name: app_name)
-      elsif stream_name != UNSPECIFIED && !stream_name.nil?
-        @stream_name = stream_name
-      else
-        raise(ArgumentError, 'missing keyword: stream_name')
+        raise(ArgumentError, 'please provide a list of event hashes with :serialized_event, :partition_key, and :stream_name keys')
       end
 
-      journal!
-    end
-
-    def self.legacy_computed_stream_name(app_name:)
-      env_var_name = [app_name&.upcase, 'JOURNALED_STREAM_NAME'].compact.join('_')
-      ENV.fetch(env_var_name)
+      journal! if Journaled.enabled?
     end
 
     def kinesis_client_config
@@ -58,20 +42,16 @@ module Journaled
 
     private
 
-    attr_reader :serialized_events, :partition_key, :stream_name
+    attr_reader :events
 
     def journal!
-      serialized_events.map do |event|
-        kinesis_client.put_record record(event) if Journaled.enabled?
+      events.map do |e|
+        kinesis_client.put_record(
+          stream_name: e[:stream_name],
+          data: e[:serialized_event],
+          partition_key: e[:partition_key],
+        )
       end
-    end
-
-    def record(serialized_event)
-      {
-        stream_name: stream_name,
-        data: serialized_event,
-        partition_key: partition_key,
-      }
     end
 
     def kinesis_client

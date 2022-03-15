@@ -79,61 +79,6 @@ RSpec.describe Journaled::DeliveryJob do
       end
     end
 
-    unless Gem::Version.new(Journaled::VERSION) < Gem::Version.new('5.0.0')
-      raise <<~MSG
-        Hey! I see that you're bumping the version to 5.0!
-
-        This is a reminder to:
-        - remove the `app_name` argument (and related logic) from `Journaled::DeliveryJob`,
-        - remove the following app_name test contexts, and
-        - make `stream_name` a required kwarg
-
-        Thanks!
-      MSG
-    end
-
-    context 'when the legacy app_name argument is present but nil' do
-      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: nil } }
-
-      around do |example|
-        with_env(JOURNALED_STREAM_NAME: 'legacy_stream_name') { example.run }
-      end
-
-      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        events = described_class.perform_now(**args)
-
-        expect(events.count).to eq 1
-        expect(events.first.shard_id).to eq '101'
-        expect(events.first.sequence_number).to eq '101123'
-        expect(kinesis_client).to have_received(:put_record).with(
-          stream_name: 'legacy_stream_name',
-          data: '{"foo":"bar"}',
-          partition_key: 'fake_partition_key',
-        )
-      end
-    end
-
-    context 'when the legacy app_name argument is present and has a value' do
-      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, app_name: 'pied_piper' } }
-
-      around do |example|
-        with_env(PIED_PIPER_JOURNALED_STREAM_NAME: 'pied_piper_events') { example.run }
-      end
-
-      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        events = described_class.perform_now(**args)
-
-        expect(events.count).to eq 1
-        expect(events.first.shard_id).to eq '101'
-        expect(events.first.sequence_number).to eq '101123'
-        expect(kinesis_client).to have_received(:put_record).with(
-          stream_name: 'pied_piper_events',
-          data: '{"foo":"bar"}',
-          partition_key: 'fake_partition_key',
-        )
-      end
-    end
-
     context 'when Amazon responds with an InternalFailure' do
       before do
         kinesis_client.stub_responses(:put_record, 'InternalFailure')

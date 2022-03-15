@@ -360,6 +360,11 @@ gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
 
+### Upgrading from 4.1.0
+
+Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0 introduces a new transaction-aware feature that will bundle
+up all events emitted within a transaction and insert them in a single job directly before the SQL `COMMIT` statement.
+
 ### Upgrading from 3.1.0
 
 Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
