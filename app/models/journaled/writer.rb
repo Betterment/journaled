@@ -34,6 +34,7 @@ class Journaled::Writer
   private
 
   attr_reader :journaled_event
+
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def validate!

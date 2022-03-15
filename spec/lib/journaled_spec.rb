@@ -75,12 +75,10 @@ RSpec.describe Journaled do
       end
 
       around do |example|
-        begin
-          example.run
-        ensure
-          ActiveJob::Base.queue_adapter = :test
-          ActiveJob::Base.enable_test_adapter(ActiveJob::QueueAdapters::TestAdapter.new)
-        end
+        example.run
+      ensure
+        ActiveJob::Base.queue_adapter = :test
+        ActiveJob::Base.enable_test_adapter(ActiveJob::QueueAdapters::TestAdapter.new)
       end
 
       it 'does not raise an error' do

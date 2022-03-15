@@ -119,9 +119,9 @@ RSpec.describe Journaled::Writer do
           it 'defaults to the global default' do
             expect { subject.journal! }.to change {
               if Rails::VERSION::MAJOR < 6
-                enqueued_jobs.select { |j| j[:job] == Journaled::DeliveryJob }.count
+                enqueued_jobs.count { |j| j[:job] == Journaled::DeliveryJob }
               else
-                enqueued_jobs.select { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }.count
+                enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }
               end
             }.from(0).to(1)
           end
@@ -133,9 +133,9 @@ RSpec.describe Journaled::Writer do
           it 'enqueues a Journaled::DeliveryJob with the given priority' do
             expect { subject.journal! }.to change {
               if Rails::VERSION::MAJOR < 6
-                enqueued_jobs.select { |j| j[:job] == Journaled::DeliveryJob }.count
+                enqueued_jobs.count { |j| j[:job] == Journaled::DeliveryJob }
               else
-                enqueued_jobs.select { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }.count
+                enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }
               end
             }.from(0).to(1)
           end

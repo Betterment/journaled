@@ -56,7 +56,7 @@ module Journaled::Changes
   end
 
   class_methods do
-    def journal_changes_to(*attribute_names, as:, enqueue_with: {}) # rubocop:disable Naming/UncommunicativeMethodParamName
+    def journal_changes_to(*attribute_names, as:, enqueue_with: {}) # rubocop:disable Naming/MethodParameterName
       if attribute_names.empty? || attribute_names.any? { |n| !n.is_a?(Symbol) }
         raise "one or more symbol attribute_name arguments is required"
       end
