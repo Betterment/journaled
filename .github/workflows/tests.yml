@@ -34,4 +34,4 @@ jobs:
     - name: Run tests
       env:
         BUNDLE_GEMFILE: ${{ matrix.gemfile }}
-      run: bundle exec rake
+      run: bundle exec rake spec
