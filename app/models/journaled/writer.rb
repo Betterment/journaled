@@ -27,8 +27,11 @@ class Journaled::Writer
   def journal!
     validate!
     stage!
-    enqueue! # before commit
-    clear! # after commit
+
+    unless transactional?
+      enqueue!
+      clear!
+    end
   end
 
   private
@@ -38,6 +41,8 @@ class Journaled::Writer
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def validate!
+    serialized_event = journaled_event.journaled_attributes.to_json
+
     schema_validator('base_event').validate! serialized_event
     schema_validator('tagged_event').validate! serialized_event if journaled_event.tagged?
     schema_validator(journaled_schema_name).validate! serialized_event
@@ -47,7 +52,7 @@ class Journaled::Writer
     Journaled::Current.pending_events << journaled_event
   end
 
-  def flush!
+  def enqueue!
     Journaled::Current.pending_events.group(&:journaled_enqueue_opts).each do |enqueue_opts, events|
       Journaled::DeliveryJob
         .set(enqueue_opts.reverse_merge(priority: Journaled.job_priority))
