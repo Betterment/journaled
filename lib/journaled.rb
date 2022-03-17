@@ -20,7 +20,7 @@ module Journaled
   end
 
   def enabled?
-    !['0', 'false', false, 'f', ''].include?(ENV.fetch('JOURNALED_ENABLED', !development_or_test?))
+    ['0', 'false', false, 'f', ''].exclude?(ENV.fetch('JOURNALED_ENABLED', !development_or_test?))
   end
 
   def schema_providers
@@ -53,7 +53,7 @@ module Journaled
 
   def self.tagged(**tags)
     existing_tags = Current.tags
-    tag!(tags)
+    tag!(**tags)
     yield
   ensure
     Current.tags = existing_tags

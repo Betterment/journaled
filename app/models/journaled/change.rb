@@ -2,20 +2,20 @@ class Journaled::Change
   include Journaled::Event
 
   attr_reader :table_name,
-    :record_id,
-    :database_operation,
-    :logical_operation,
-    :changes,
-    :journaled_stream_name,
-    :journaled_enqueue_opts,
-    :actor
+              :record_id,
+              :database_operation,
+              :logical_operation,
+              :changes,
+              :journaled_stream_name,
+              :journaled_enqueue_opts,
+              :actor
 
   journal_attributes :table_name,
-    :record_id,
-    :database_operation,
-    :logical_operation,
-    :changes,
-    :actor
+                     :record_id,
+                     :database_operation,
+                     :logical_operation,
+                     :changes,
+                     :actor
 
   def initialize(table_name:,
                  record_id:,

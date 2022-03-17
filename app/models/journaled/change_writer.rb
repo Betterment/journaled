@@ -1,5 +1,6 @@
 class Journaled::ChangeWriter
   attr_reader :model, :change_definition
+
   delegate :attribute_names, :logical_operation, to: :change_definition
 
   def initialize(model:, change_definition:)
@@ -52,8 +53,8 @@ class Journaled::ChangeWriter
   private
 
   def pluck_changed_values(change_hash, index:)
-    change_hash.each_with_object({}) do |(k, v), result|
-      result[k] = v[index]
+    change_hash.transform_values do |v|
+      v[index]
     end
   end
 

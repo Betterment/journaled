@@ -1,14 +1,15 @@
 module Journaled::RelationChangeProtection
-  def update_all(updates, force: false) # rubocop:disable Metrics/AbcSize, Metrics/PerceivedComplexity
-    unless force || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?
-      conflicting_journaled_attribute_names = if updates.is_a?(Hash)
-                                                @klass.journaled_attribute_names & updates.keys.map(&:to_sym)
-                                              elsif updates.is_a?(String)
-                                                @klass.journaled_attribute_names.select do |a|
-                                                  updates.match?(/\b(?<!')#{a}(?!')\b/)
-                                                end
-                                              else
-                                                raise "unsupported type '#{updates.class}' for 'updates'"
+  def update_all(updates, opts = { force: false }) # rubocop:disable Metrics/AbcSize
+    unless opts[:force] || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?
+      conflicting_journaled_attribute_names = case updates
+                                                when Hash
+                                                  @klass.journaled_attribute_names & updates.keys.map(&:to_sym)
+                                                when String
+                                                  @klass.journaled_attribute_names.select do |a|
+                                                    updates.match?(/\b(?<!')#{a}(?!')\b/)
+                                                  end
+                                                else
+                                                  raise "unsupported type '#{updates.class}' for 'updates'"
                                               end
       raise(<<~ERROR) if conflicting_journaled_attribute_names.present?
         .update_all aborted by Journaled::Changes due to journaled attributes:

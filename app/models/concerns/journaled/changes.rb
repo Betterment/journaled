@@ -39,8 +39,8 @@ module Journaled::Changes
       end
     end
 
-    def update_columns(attributes, force: false)
-      unless force || self.class.journaled_attribute_names.empty?
+    def update_columns(attributes, opts = { force: false })
+      unless opts[:force] || self.class.journaled_attribute_names.empty?
         conflicting_journaled_attribute_names = self.class.journaled_attribute_names & attributes.keys.map(&:to_sym)
         raise(<<~ERROR) if conflicting_journaled_attribute_names.present?
           #update_columns aborted by Journaled::Changes due to journaled attributes:
@@ -56,7 +56,7 @@ module Journaled::Changes
   end
 
   class_methods do
-    def journal_changes_to(*attribute_names, as:, enqueue_with: {}) # rubocop:disable Naming/UncommunicativeMethodParamName
+    def journal_changes_to(*attribute_names, as:, enqueue_with: {}) # rubocop:disable Naming/MethodParameterName
       if attribute_names.empty? || attribute_names.any? { |n| !n.is_a?(Symbol) }
         raise "one or more symbol attribute_name arguments is required"
       end
@@ -69,8 +69,8 @@ module Journaled::Changes
     end
 
     if Rails::VERSION::MAJOR > 5 || (Rails::VERSION::MAJOR == 5 && Rails::VERSION::MINOR >= 2)
-      def delete(id_or_array, force: false)
-        if force || journaled_attribute_names.empty?
+      def delete(id_or_array, opts = { force: false })
+        if opts[:force] || journaled_attribute_names.empty?
           where(primary_key => id_or_array).delete_all(force: true)
         else
           raise(<<~ERROR)

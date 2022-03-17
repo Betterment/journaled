@@ -1,8 +1,0 @@
-project_type: ruby_gem
-ruby_version: 2.6.1
-resource_class: small
-cache_sequence: 4
-test_gemfiles:
-  - gemfiles/rails_5_2.gemfile
-  - gemfiles/rails_6_0.gemfile
-  - gemfiles/rails_6_1.gemfile

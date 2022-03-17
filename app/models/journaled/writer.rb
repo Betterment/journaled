@@ -28,12 +28,13 @@ class Journaled::Writer
     validate!
     Journaled::DeliveryJob
       .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
-      .perform_later(delivery_perform_args)
+      .perform_later(**delivery_perform_args)
   end
 
   private
 
   attr_reader :journaled_event
+
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def validate!

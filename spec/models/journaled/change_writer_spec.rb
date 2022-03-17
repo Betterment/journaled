@@ -139,7 +139,7 @@ RSpec.describe Journaled::ChangeWriter do
     end
 
     it "doesn't set journaled_stream_name if model class doesn't respond to it" do
-      expect(subject.journaled_change_for("update", {}).journaled_stream_name).to eq(nil)
+      expect(subject.journaled_change_for("update", {}).journaled_stream_name).to be_nil
     end
 
     context "with journaled default app name set" do

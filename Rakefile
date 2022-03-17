@@ -4,37 +4,23 @@ rescue LoadError
   puts 'You must `gem install bundler` and `bundle install` to run rake tasks'
 end
 
-require 'rdoc/task'
-
-RDoc::Task.new(:rdoc) do |rdoc|
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'Journaled'
-  rdoc.options << '--line-numbers'
-  rdoc.rdoc_files.include('README.rdoc')
-  rdoc.rdoc_files.include('lib/**/*.rb')
-end
-
-APP_RAKEFILE = File.expand_path('spec/dummy/Rakefile', __dir__)
-load 'rails/tasks/engine.rake'
-
 Bundler::GemHelper.install_tasks
 
-if %w(development test).include? Rails.env
-  require 'rspec/core'
-  require 'rspec/core/rake_task'
-  RSpec::Core::RakeTask.new
+require 'rubocop/rake_task'
+RuboCop::RakeTask.new
 
-  require 'rubocop/rake_task'
-  RuboCop::RakeTask.new
+require 'rspec/core'
+require 'rspec/core/rake_task'
+RSpec::Core::RakeTask.new(:spec)
 
-  task(:default).clear
+def default_task
   if ENV['APPRAISAL_INITIALIZED'] || ENV['CI']
-    task default: %i(rubocop spec)
+    %i(rubocop spec)
   else
     require 'appraisal'
     Appraisal::Task.new
-    task default: :appraisal
+    %i(appraisal)
   end
-
-  task 'db:test:prepare' => 'db:setup'
 end
+
+task(:default).clear.enhance(default_task)

@@ -32,8 +32,8 @@ RSpec.describe Journaled::Actor do
 
     allow(subject).to receive(:current_user).and_return(nil)
 
-    expect(Journaled::Current.journaled_actor_proc.call).to eq nil
-    expect(Journaled::Current.actor).to eq nil
+    expect(Journaled::Current.journaled_actor_proc.call).to be_nil
+    expect(Journaled::Current.actor).to be_nil
   end
 
   it "Stores a thunk returning current_user if it is set when called" do
