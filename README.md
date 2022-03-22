@@ -362,8 +362,15 @@ As such, **we always recommend upgrading only one major version at a time.**
 
 ### Upgrading from 4.1.0
 
-Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0 introduces a new transaction-aware feature that will bundle
-up all events emitted within a transaction and insert them in a single job directly before the SQL `COMMIT` statement.
+Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0
+introduces a new transaction-aware feature that will bundle up all events
+emitted within a transaction and enqueue them all in a single "batch" job
+directly before the SQL `COMMIT` statement. This reduces the database impact of
+emitting a large volume of events at once.
+
+Backwards compatibility has been included for background jobs enqueued by
+version 4.0 and above, but **has been dropped for jobs emitted by versions prior
+to 4.0**.
 
 ### Upgrading from 3.1.0
 
