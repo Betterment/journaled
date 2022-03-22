@@ -105,7 +105,7 @@ RSpec.describe Journaled::Writer do
 
         it 'creates a delivery with the app name passed through' do
           expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
-          expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
+          expect(enqueued_jobs.first[:args].first.first).to include('stream_name' => 'my_app_events')
         end
 
         context 'when there is no job priority specified in the enqueue opts' do
@@ -166,7 +166,7 @@ RSpec.describe Journaled::Writer do
 
         it 'creates a delivery with the app name passed through' do
           expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
-          expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
+          expect(enqueued_jobs.first[:args].first.first).to include('stream_name' => 'my_app_events')
         end
       end
     end

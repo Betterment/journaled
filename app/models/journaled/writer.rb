@@ -26,17 +26,35 @@ class Journaled::Writer
 
   def journal!
     validate!
-    stage!
+    enqueue_before_commit!
+  end
 
-    unless transactional?
-      enqueue!
-      clear!
+  def self.enqueue!(events)
+    events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, delivery_events|
+      Journaled::DeliveryJob
+        .set(enqueue_opts.reverse_merge(priority: Journaled.job_priority))
+        .perform_later(delivery_perform_args(delivery_events))
     end
   end
+
+  def self.delivery_perform_args(events)
+    events.map do |event|
+      {
+        serialized_event: event.journaled_attributes.to_json,
+        partition_key: event.journaled_partition_key,
+        stream_name: event.journaled_stream_name,
+      }
+    end
+  end
+
 
   private
 
   attr_reader :journaled_event
+
+  def current_connection
+    ActiveRecord::Base.connection # TODO: Use the Journaled::DeliveryJob's AR connection if it applies
+  end
 
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
@@ -48,30 +66,16 @@ class Journaled::Writer
     schema_validator(journaled_schema_name).validate! serialized_event
   end
 
+  def enqueue_before_commit!
+    if current_connection.transaction_open?
+      stage!
+    else
+      ActiveRecord::Base.transaction { stage! }
+    end
+  end
+
   def stage!
-    Journaled::Current.pending_events << journaled_event
-  end
-
-  def enqueue!
-    Journaled::Current.pending_events.group(&:journaled_enqueue_opts).each do |enqueue_opts, events|
-      Journaled::DeliveryJob
-        .set(enqueue_opts.reverse_merge(priority: Journaled.job_priority))
-        .perform_later(**delivery_perform_args(events))
-    end
-  end
-
-  def clear!
-    Journaled::Curent.pending_events.clear
-  end
-
-  def delivery_perform_args(events)
-    events.map do |e|
-      {
-        serialized_event: e.journaled_attributes.to_json,
-        partition_key: e.journaled_partition_key,
-        stream_name: e.journaled_stream_name,
-      }
-    end
+    current_connection._journaled_pending_events << journaled_event
   end
 
   def schema_validator(schema_name)
