@@ -12,14 +12,9 @@ module Journaled
       raise KinesisTemporaryFailure
     end
 
-    def perform(*events, serialized_event: nil, partition_key: nil, stream_name: nil)
-      if events == []
-        legacy_args = { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }
-          .delete_if { |_k, v| v.nil? }
-        @records = [Record.new(**legacy_args)]
-      else
-        @records = events.map { |e| Record.new(**e) }
-      end
+    def perform(*events, **legacy_kwargs)
+      @records = events.map { |e| Record.new(**e) }
+      @records << Record.new(**legacy_kwargs.delete_if { |_k, v| v.nil? }) if legacy_kwargs.any?
 
       journal! if Journaled.enabled?
     end
