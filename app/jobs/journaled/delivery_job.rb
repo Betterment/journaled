@@ -13,8 +13,8 @@ module Journaled
     end
 
     def perform(*events, **legacy_kwargs)
-      @records = events.map { |e| Record.new(**e) }
-      @records << Record.new(**legacy_kwargs.delete_if { |_k, v| v.nil? }) if legacy_kwargs.any?
+      @kinesis_records = events.map { |e| KinesisRecord.new(**e) }
+      @kinesis_records << KinesisRecord.new(**legacy_kwargs.delete_if { |_k, v| v.nil? }) if legacy_kwargs.any?
 
       journal! if Journaled.enabled?
     end
@@ -31,21 +31,21 @@ module Journaled
 
     private
 
-    Record = Struct.new(:serialized_event, :partition_key, :stream_name, keyword_init: true) do
+    KinesisRecord = Struct.new(:serialized_event, :partition_key, :stream_name, keyword_init: true) do
       def initialize(serialized_event:, partition_key:, stream_name:)
         super(serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name)
       end
+
+      def to_h
+        { stream_name: stream_name, data: serialized_event, partition_key: partition_key }
+      end
     end
 
-    attr_reader :records
+    attr_reader :kinesis_records
 
     def journal!
-      records.map do |record|
-        kinesis_client.put_record(
-          stream_name: record.stream_name,
-          data: record.serialized_event,
-          partition_key: record.partition_key,
-        )
+      kinesis_records.map do |record|
+        kinesis_client.put_record(**record.to_h)
       end
     end
 
