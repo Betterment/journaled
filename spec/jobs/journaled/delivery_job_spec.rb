@@ -140,24 +140,6 @@ RSpec.describe Journaled::DeliveryJob do
     end
   end
 
-  describe ".legacy_computed_stream_name" do
-    context "when app_name is unspecified" do
-      it "is fetched from a prefixed ENV var if specified" do
-        allow(ENV).to receive(:fetch).and_return("expected_stream_name")
-        expect(described_class.legacy_computed_stream_name(app_name: nil)).to eq("expected_stream_name")
-        expect(ENV).to have_received(:fetch).with("JOURNALED_STREAM_NAME")
-      end
-    end
-
-    context "when app_name is specified" do
-      it "is fetched from a prefixed ENV var if specified" do
-        allow(ENV).to receive(:fetch).and_return("expected_stream_name")
-        expect(described_class.legacy_computed_stream_name(app_name: "my_funky_app_name")).to eq("expected_stream_name")
-        expect(ENV).to have_received(:fetch).with("MY_FUNKY_APP_NAME_JOURNALED_STREAM_NAME")
-      end
-    end
-  end
-
   describe "#kinesis_client_config" do
     it "is in us-east-1 by default" do
       with_env(AWS_DEFAULT_REGION: nil) do
