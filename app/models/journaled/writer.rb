@@ -47,7 +47,6 @@ class Journaled::Writer
     end
   end
 
-
   private
 
   attr_reader :journaled_event

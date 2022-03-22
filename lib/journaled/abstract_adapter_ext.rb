@@ -28,17 +28,20 @@ module Journaled
         @_journaled_pending_events ||= []
       end
 
+      # The following methods adhere to the API contract defined by:
+      # https://github.com/rails/rails/blob/v6.0.4.7/activerecord/lib/active_record/transactions.rb
+      #
+      # This allows our TransactionHandler to act as a "transaction record" and
+      # run callbacks before/after commit (or after rollback).
       def before_committed!(*)
         Writer.enqueue!(_journaled_pending_events)
       end
 
       def committed!(*)
-        _journaled_pending_events.clear
         @active = false
       end
 
       def rolledback!(*)
-        _journaled_pending_events.clear
         @active = false
       end
 
