@@ -12,19 +12,13 @@ module Journaled
       raise KinesisTemporaryFailure
     end
 
-    UNSPECIFIED = Object.new
-    private_constant :UNSPECIFIED
-
-    def perform(*events,
-                serialized_event: UNSPECIFIED,
-                partition_key: UNSPECIFIED,
-                stream_name: UNSPECIFIED)
-      if events != []
-        @events = events
-      elsif serialized_event != UNSPECIFIED && partition_key != UNSPECIFIED && stream_name != UNSPECIFIED
-        @events = [{ serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }]
+    def perform(*events, serialized_event: nil, partition_key: nil, stream_name: nil)
+      if events == []
+        legacy_args = { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }
+          .delete_if { |_k, v| v.nil? }
+        @records = [Record.new(**legacy_args)]
       else
-        raise(ArgumentError, 'please provide a list of event hashes with :serialized_event, :partition_key, and :stream_name keys')
+        @records = events.map { |e| Record.new(**e) }
       end
 
       journal! if Journaled.enabled?
@@ -42,14 +36,20 @@ module Journaled
 
     private
 
-    attr_reader :events
+    Record = Struct.new(:serialized_event, :partition_key, :stream_name, keyword_init: true) do
+      def initialize(serialized_event:, partition_key:, stream_name:)
+        super(serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name)
+      end
+    end
+
+    attr_reader :records
 
     def journal!
-      events.map do |e|
+      records.map do |record|
         kinesis_client.put_record(
-          stream_name: e[:stream_name],
-          data: e[:serialized_event],
-          partition_key: e[:partition_key],
+          stream_name: record.stream_name,
+          data: record.serialized_event,
+          partition_key: record.partition_key,
         )
       end
     end
