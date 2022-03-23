@@ -1,8 +1,8 @@
 module Journaled::Event
   extend ActiveSupport::Concern
 
-  def journal!
-    Journaled::Writer.new(journaled_event: self).journal!
+  def journal!(**opts)
+    Journaled::Writer.new(journaled_event: self).journal!(**opts)
   end
 
   # Base attributes

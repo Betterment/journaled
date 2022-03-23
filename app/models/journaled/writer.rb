@@ -29,11 +29,11 @@ class Journaled::Writer
     enqueue_before_commit!
   end
 
-  def self.enqueue!(events)
+  def self.enqueue!(*events)
     events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, delivery_events|
       Journaled::DeliveryJob
         .set(enqueue_opts.reverse_merge(priority: Journaled.job_priority))
-        .perform_later(delivery_perform_args(delivery_events))
+        .perform_later(*delivery_perform_args(delivery_events))
     end
   end
 
@@ -51,10 +51,6 @@ class Journaled::Writer
 
   attr_reader :journaled_event
 
-  def current_connection
-    ActiveRecord::Base.connection # TODO: Use the Journaled::DeliveryJob's AR connection if it applies
-  end
-
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def validate!
@@ -66,15 +62,19 @@ class Journaled::Writer
   end
 
   def enqueue_before_commit!
-    if current_connection.transaction_open?
+    if connection_provider.connection.transaction_open?
       stage!
     else
-      ActiveRecord::Base.transaction { stage! }
+      self.class.enqueue!(journaled_event)
     end
   end
 
   def stage!
-    current_connection._journaled_pending_events << journaled_event
+    connection_provider.connection._journaled_pending_events << journaled_event
+  end
+
+  def connection_provider
+    ActiveRecord::Base # TODO: Use underlying ActiveRecord Job classe
   end
 
   def schema_validator(schema_name)

@@ -14,7 +14,9 @@ module Journaled
 
     class TransactionHandler
       def initialize(connection:)
-        raise TransactionSafetyError, "Journaled events must be enqueued within a database transaction" unless connection.transaction_open?
+        raise TransactionSafetyError, <<~MSG unless connection.transaction_open?
+          By default, journaled events must be enqueued within a database transaction.
+        MSG
 
         connection.add_transaction_record(self)
         @active = true
@@ -34,7 +36,7 @@ module Journaled
       # This allows our TransactionHandler to act as a "transaction record" and
       # run callbacks before/after commit (or after rollback).
       def before_committed!(*)
-        Writer.enqueue!(_journaled_pending_events)
+        Writer.enqueue!(*_journaled_pending_events)
       end
 
       def committed!(*)
