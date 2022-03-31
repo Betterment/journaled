@@ -9,15 +9,7 @@ module Journaled
 
     module TestBehaviors
       def _journaled_transaction_open?
-        _journaled_tests_run_in_transaction? ? open_transactions > 1 : super
-      end
-
-      def _journaled_tests_run_in_transaction?
-        if defined?(RSpec)
-          RSpec.current_example.example_group_instance.use_transactional_tests?
-        elsif defined?(ActiveSupport::TestCase)
-          ActiveRecord::TestFixtures.use_transactional_tests # TODO: lookup current test class
-        end
+        open_transactions > 1 || current_transaction.joinable?
       end
     end
 
