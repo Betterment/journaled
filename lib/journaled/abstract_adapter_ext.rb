@@ -2,6 +2,25 @@ module Journaled
   module AbstractAdapterExt
     delegate :_journaled_pending_events, to: :_journaled_transaction_handler
 
+    def self.included(klass)
+      klass.alias_method :_journaled_transaction_open?, :transaction_open?
+      klass.prepend TestBehaviors if Rails.env.test?
+    end
+
+    module TestBehaviors
+      def _journaled_transaction_open?
+        _journaled_tests_run_in_transaction? ? open_transactions > 1 : super
+      end
+
+      def _journaled_tests_run_in_transaction?
+        if defined?(RSpec)
+          RSpec.current_example.example_group_instance.use_transactional_tests?
+        elsif defined?(ActiveSupport::TestCase)
+          ActiveRecord::TestFixtures.use_transactional_tests # TODO: lookup current test class
+        end
+      end
+    end
+
     private
 
     def _journaled_transaction_handler
@@ -14,7 +33,7 @@ module Journaled
 
     class TransactionHandler
       def initialize(connection:)
-        raise TransactionSafetyError, <<~MSG unless connection.transaction_open?
+        raise TransactionSafetyError, <<~MSG unless connection._journaled_transaction_open?
           By default, journaled events must be enqueued within a database transaction.
         MSG
 
@@ -35,13 +54,12 @@ module Journaled
       #
       # This allows our TransactionHandler to act as a "transaction record" and
       # run callbacks before/after commit (or after rollback).
-      def before_committed!(*)
+      def before_committed!
         Writer.enqueue!(*_journaled_pending_events)
-      end
-
-      def committed!(*)
         @active = false
       end
+
+      def committed!(*); end
 
       def rolledback!(*)
         @active = false

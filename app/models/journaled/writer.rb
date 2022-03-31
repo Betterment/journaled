@@ -62,7 +62,7 @@ class Journaled::Writer
   end
 
   def enqueue_before_commit!
-    if connection_provider.connection.transaction_open?
+    if connection_provider.connection._journaled_transaction_open?
       stage!
     else
       self.class.enqueue!(journaled_event)
@@ -74,7 +74,7 @@ class Journaled::Writer
   end
 
   def connection_provider
-    ActiveRecord::Base # TODO: Use underlying ActiveRecord Job classe
+    ActiveRecord::Base # TODO: Use underlying ActiveRecord Job class
   end
 
   def schema_validator(schema_name)
