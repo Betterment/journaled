@@ -112,6 +112,7 @@ RSpec.describe Journaled::Writer do
             .to change { enqueued_jobs.count }.from(0).to(1)
             .and journal_event(journaled_event_attributes)
             .with_partition_key('fake_partition_key')
+            .with_stream_name('my_app_events')
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
 
