@@ -85,7 +85,9 @@ RSpec.describe Journaled::Writer do
       let(:journaled_event_attributes) { { foo: 1 } }
 
       it 'raises an error and does not enqueue anything' do
-        expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+        expect { subject.journal! }
+          .to raise_error(JSON::Schema::ValidationError)
+          .and not_journal_event
         expect(enqueued_jobs.count).to eq 0
       end
     end
@@ -95,7 +97,9 @@ RSpec.describe Journaled::Writer do
         let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: 1 } }
 
         it 'raises an error and does not enqueue anything' do
-          expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+          expect { subject.journal! }
+            .to raise_error(JSON::Schema::ValidationError)
+            .and not_journal_event
           expect(enqueued_jobs.count).to eq 0
         end
       end
@@ -104,7 +108,10 @@ RSpec.describe Journaled::Writer do
         let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: :bar } }
 
         it 'creates a delivery with the app name passed through' do
-          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect { subject.journal! }
+            .to change { enqueued_jobs.count }.from(0).to(1)
+            .and journal_event(journaled_event_attributes)
+            .with_partition_key('fake_partition_key')
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
 

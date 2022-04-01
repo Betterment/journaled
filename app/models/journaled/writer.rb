@@ -26,9 +26,11 @@ class Journaled::Writer
 
   def journal!
     validate!
-    Journaled::DeliveryJob
-      .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
-      .perform_later(**delivery_perform_args)
+    ActiveSupport::Notifications.instrument('journaled.event.enqueue', journaled_event) do
+      Journaled::DeliveryJob
+        .set(journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority))
+        .perform_later(**delivery_perform_args)
+    end
   end
 
   private
