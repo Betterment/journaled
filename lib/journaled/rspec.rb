@@ -20,8 +20,10 @@ end
 RSpec::Matchers.define :journal_events do |events = {}|
   attr_accessor :expected, :actual
 
+  chain :with_schema_name, :expected_schema_name
   chain :with_partition_key, :expected_partition_key
   chain :with_stream_name, :expected_stream_name
+  chain :with_enqueue_opts, :expected_enqueue_opts
 
   def supports_block_expectations?
     true
@@ -35,14 +37,19 @@ RSpec::Matchers.define :journal_events do |events = {}|
 
   match do |block|
     @expected = [events].flatten(1).map { |e| { journaled_attributes: e } }
+    @expected.each { |e| e.merge!(journaled_schema_name: expected_schema_name) } if expected_schema_name
     @expected.each { |e| e.merge!(journaled_partition_key: expected_partition_key) } if expected_partition_key
     @expected.each { |e| e.merge!(journaled_stream_name: expected_stream_name) } if expected_stream_name
+    @expected.each { |e| e.merge!(journaled_enqueue_opts: expected_enqueue_opts) } if expected_enqueue_opts
     @actual = []
 
     callback = ->(_name, _started, _finished, _unique_id, payload) do
-      a = { journaled_attributes: payload.journaled_attributes }
-      a[:journaled_partition_key] = payload.journaled_partition_key if expected_partition_key
-      a[:journaled_stream_name] = payload.journaled_stream_name if expected_stream_name
+      event = payload[:event]
+      a = { journaled_attributes: event.journaled_attributes }
+      a[:journaled_schema_name] = event.journaled_schema_name if expected_schema_name
+      a[:journaled_partition_key] = event.journaled_partition_key if expected_partition_key
+      a[:journaled_stream_name] = event.journaled_stream_name if expected_stream_name
+      a[:journaled_enqueue_opts] = payload[:enqueue_opts] if expected_enqueue_opts
       actual << a
     end
 

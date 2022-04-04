@@ -72,7 +72,7 @@ RSpec.describe Journaled::Writer do
     let(:journaled_enqueue_opts) { {} }
     let(:journaled_event) do
       double(
-        journaled_schema_name: :fake_schema_name,
+        journaled_schema_name: 'fake_schema_name',
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
         journaled_stream_name: 'my_app_events',
@@ -111,8 +111,10 @@ RSpec.describe Journaled::Writer do
           expect { subject.journal! }
             .to change { enqueued_jobs.count }.from(0).to(1)
             .and journal_event(journaled_event_attributes)
+            .with_schema_name('fake_schema_name')
             .with_partition_key('fake_partition_key')
             .with_stream_name('my_app_events')
+            .with_enqueue_opts({})
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
 
@@ -132,6 +134,11 @@ RSpec.describe Journaled::Writer do
                 enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }
               end
             }.from(0).to(1)
+              .and journal_event(journaled_event_attributes)
+              .with_schema_name('fake_schema_name')
+              .with_partition_key('fake_partition_key')
+              .with_stream_name('my_app_events')
+              .with_enqueue_opts(priority: 999)
           end
         end
 
@@ -146,6 +153,11 @@ RSpec.describe Journaled::Writer do
                 enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }
               end
             }.from(0).to(1)
+              .and journal_event(journaled_event_attributes)
+              .with_schema_name('fake_schema_name')
+              .with_partition_key('fake_partition_key')
+              .with_stream_name('my_app_events')
+              .with_enqueue_opts(priority: 13)
           end
         end
       end
@@ -162,7 +174,9 @@ RSpec.describe Journaled::Writer do
         end
 
         it 'raises an error and does not enqueue anything' do
-          expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+          expect { subject.journal! }
+            .to not_journal_events
+            .and raise_error JSON::Schema::ValidationError
           expect(enqueued_jobs.count).to eq 0
         end
       end
@@ -173,7 +187,13 @@ RSpec.describe Journaled::Writer do
         end
 
         it 'creates a delivery with the app name passed through' do
-          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect { subject.journal! }
+            .to change { enqueued_jobs.count }.from(0).to(1)
+            .and journal_event(journaled_event_attributes)
+            .with_schema_name('fake_schema_name')
+            .with_partition_key('fake_partition_key')
+            .with_stream_name('my_app_events')
+            .with_enqueue_opts({})
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
       end
