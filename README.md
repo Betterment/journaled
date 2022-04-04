@@ -406,6 +406,25 @@ it "journals exactly these things or there will be heck to pay" do
 end
 ```
 
+### Instrumentation
+
+When an event is enqueued, an `ActiveSupport::Notification` titled
+`journaled.event.enqueue` is emitted. Its payload will include the `:event` and
+its background job `:priority`.
+
+This can be forwarded along to your preferred monitoring solution via a Rails
+initializer:
+
+```ruby
+ActiveSupport::Notifications.subscribe('journaled.event.enqueue') do |*args|
+  payload = ActiveSupport::Notifications::Event.new(*args).payload
+  journaled_event = payload[:event]
+
+  tags = { priority: payload[:priority], event_type: journaled_event.journaled_attributes[:event_type] }
+
+  Statsd.increment('journaled.event.enqueue', tags: tags.map { |k,v| "#{k.to_s[0..64]}:#{v.to_s[0..255]}" })
+end
+```
 
 ## Upgrades
 
