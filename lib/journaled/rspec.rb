@@ -24,6 +24,7 @@ RSpec::Matchers.define :journal_events do |events = {}|
   chain :with_partition_key, :expected_partition_key
   chain :with_stream_name, :expected_stream_name
   chain :with_enqueue_opts, :expected_enqueue_opts
+  chain :with_priority, :expected_priority
 
   def supports_block_expectations?
     true
@@ -41,6 +42,7 @@ RSpec::Matchers.define :journal_events do |events = {}|
     @expected.each { |e| e.merge!(journaled_partition_key: expected_partition_key) } if expected_partition_key
     @expected.each { |e| e.merge!(journaled_stream_name: expected_stream_name) } if expected_stream_name
     @expected.each { |e| e.merge!(journaled_enqueue_opts: expected_enqueue_opts) } if expected_enqueue_opts
+    @expected.each { |e| e.merge!(priority: expected_priority) } if expected_priority
     @actual = []
 
     callback = ->(_name, _started, _finished, _unique_id, payload) do
@@ -49,7 +51,8 @@ RSpec::Matchers.define :journal_events do |events = {}|
       a[:journaled_schema_name] = event.journaled_schema_name if expected_schema_name
       a[:journaled_partition_key] = event.journaled_partition_key if expected_partition_key
       a[:journaled_stream_name] = event.journaled_stream_name if expected_stream_name
-      a[:journaled_enqueue_opts] = payload[:enqueue_opts] if expected_enqueue_opts
+      a[:journaled_enqueue_opts] = event.journaled_enqueue_opts if expected_enqueue_opts
+      a[:priority] = payload[:priority] if expected_priority
       actual << a
     end
 

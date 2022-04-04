@@ -26,10 +26,9 @@ class Journaled::Writer
 
   def journal!
     validate!
-    enqueue_opts = journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority)
-    ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: journaled_event, enqueue_opts: enqueue_opts) do
+    ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: journaled_event, priority: job_opts[:priority]) do
       Journaled::DeliveryJob
-        .set(enqueue_opts)
+        .set(job_opts)
         .perform_later(**delivery_perform_args)
     end
   end
@@ -44,6 +43,10 @@ class Journaled::Writer
     schema_validator('base_event').validate! serialized_event
     schema_validator('tagged_event').validate! serialized_event if journaled_event.tagged?
     schema_validator(journaled_schema_name).validate! serialized_event
+  end
+
+  def job_opts
+    journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority)
   end
 
   def delivery_perform_args

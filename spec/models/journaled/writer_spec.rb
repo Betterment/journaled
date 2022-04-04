@@ -138,7 +138,8 @@ RSpec.describe Journaled::Writer do
               .with_schema_name('fake_schema_name')
               .with_partition_key('fake_partition_key')
               .with_stream_name('my_app_events')
-              .with_enqueue_opts(priority: 999)
+              .with_priority(999)
+              .and not_journal_event.with_enqueue_opts(priority: 999) # with_enqueue_opts looks at event itself
           end
         end
 
@@ -157,6 +158,7 @@ RSpec.describe Journaled::Writer do
               .with_schema_name('fake_schema_name')
               .with_partition_key('fake_partition_key')
               .with_stream_name('my_app_events')
+              .with_priority(13)
               .with_enqueue_opts(priority: 13)
           end
         end
@@ -194,6 +196,8 @@ RSpec.describe Journaled::Writer do
             .with_partition_key('fake_partition_key')
             .with_stream_name('my_app_events')
             .with_enqueue_opts({})
+            .with_priority(Journaled.job_priority)
+            .and not_journal_event.with_enqueue_opts(priority: Journaled.job_priority)
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
       end
