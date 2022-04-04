@@ -17,6 +17,8 @@ RSpec::Matchers.define :journal_changes_to do |*attribute_names, as:|
   end
 end
 
+RSpec::Matchers.define_negated_matcher :not_journal_changes_to, :journal_changes_to
+
 RSpec::Matchers.define :journal_events do |events = {}|
   attr_accessor :expected, :actual
 
