@@ -27,9 +27,7 @@ class Journaled::Writer
   def journal!
     validate!
     ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: journaled_event, priority: job_opts[:priority]) do
-      Journaled::DeliveryJob
-        .set(job_opts)
-        .perform_later(**delivery_perform_args)
+      Journaled::DeliveryJob.set(job_opts).perform_later(**delivery_perform_args)
     end
   end
 
