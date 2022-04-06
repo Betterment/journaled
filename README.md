@@ -343,8 +343,9 @@ as described in [Change Journaling](#change-journaling) above.
 ### Testing
 
 If you use RSpec, you can test for journaling behaviors with the
-`journal_event(s)` and `journal_changes_to` matchers. First, make sure to
-require `journaled/rspec` in your spec setup (e.g. `spec/rails_helper.rb`):
+`journal_event(s)_including` and `journal_changes_to` matchers. First, make
+sure to require `journaled/rspec` in your spec setup (e.g.
+`spec/rails_helper.rb`):
 
 ```ruby
 require 'journaled/rspec'
@@ -352,28 +353,37 @@ require 'journaled/rspec'
 
 #### Checking for specific events
 
-The `journal_event` and `journal_events` matchers allow you to check for one or
-more matching event being journaled:
+The `journal_event_including` and `journal_events_including` matchers allow you
+to check for one or more matching event being journaled:
 
 ```ruby
-expect { my_code }.to journal_event(name: 'foo')
-expect { my_code }.to journal_events({ name: 'foo', value: 1 }, { name: 'foo', value: 2 })
+expect { my_code }
+  .to journal_event_including(name: 'foo')
+expect { my_code }
+  .to journal_events_including({ name: 'foo', value: 1 }, { name: 'foo', value: 2 })
 ```
 
-This will only perform exact matches on the specified fields (and will not match
-one way or the other against unspecified fields).
+This will only perform matches on the specified fields (and will not match one
+way or the other against unspecified fields). These matchers will also ignore
+any extraneous events that are not positively matched (as they may be unrelated
+to behavior under test).
 
-The matchers also support negative assertions (in two forms):
+When writing tests, pairing every positive assertion with a negative assertion
+is a good practice, and so negative matching is also supported (via both
+`.not_to` and `.to not_`):
 
 ```ruby
-expect { my_code }.not_to journal_event
-expect { my_code }.to not_journal_event # supports chaining with `.and`
+expect { my_code }
+  .not_to journal_events_including({ name: 'foo' }, { name: 'bar' })
+expect { my_code }
+  .to raise_error(SomeError)
+  .and not_journal_event_including(name: 'foo') # the `not_` variant can chain off of `.and`
 ```
 
 Several chainable modifiers are also available:
 
 ```ruby
-expect { my_code }.to journal_event(name: 'foo')
+expect { my_code }.to journal_event_including(name: 'foo')
   .with_schema_name('my_event_schema')
   .with_partition_key(user.id)
   .with_stream_name('my_stream_name')
@@ -386,11 +396,11 @@ multiple sets of options:
 
 ```ruby
 expect { subject.journal! }
-  .to journal_events({ name: 'event1', value: 300 }, { name: 'event2', value: 200 })
+  .to journal_events_including({ name: 'event1', value: 300 }, { name: 'event2', value: 200 })
     .with_priority(10)
-  .and journal_event(name: 'event3', value: 100)
+  .and journal_event_including(name: 'event3', value: 100)
     .with_priority(20)
-  .and not_journal_event(name: 'other_event')
+  .and not_journal_event_including(name: 'other_event')
 ```
 
 #### Checking for `Journaled::Changes` declarations
