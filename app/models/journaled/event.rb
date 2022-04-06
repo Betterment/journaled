@@ -39,6 +39,10 @@ module Journaled::Event
     Journaled.default_stream_name
   end
 
+  def journaled_enqueue_opts
+    {}
+  end
+
   def tagged?
     false
   end
