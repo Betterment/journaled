@@ -19,7 +19,9 @@ end
 
 RSpec::Matchers.define_negated_matcher :not_journal_changes_to, :journal_changes_to
 
-RSpec::Matchers.define :journal_events do |*events|
+RSpec::Matchers.define :journal_events_including do |*expected_events|
+  raise "Please specify at least one expected event. RSpec argument matchers are supported." if expected_events.empty?
+
   attr_accessor :expected, :actual, :matches, :nonmatches
 
   chain :with_schema_name, :expected_schema_name
@@ -39,8 +41,9 @@ RSpec::Matchers.define :journal_events do |*events|
   end
 
   match do |block|
-    events = [events.first || {}].flatten(1) unless events.length > 1
-    self.expected = events.map { |e| { journaled_attributes: e } }
+    expected_events = [expected_events.first].flatten(1) if expected_events.length > 1
+
+    self.expected = expected_events.map { |e| { journaled_attributes: e } }
     expected.each { |e| e.merge!(journaled_schema_name: expected_schema_name) } if expected_schema_name
     expected.each { |e| e.merge!(journaled_partition_key: expected_partition_key) } if expected_partition_key
     expected.each { |e| e.merge!(journaled_stream_name: expected_stream_name) } if expected_stream_name
@@ -71,7 +74,7 @@ RSpec::Matchers.define :journal_events do |*events|
     matches.count == expected.count && expected.all? do |e|
       match, index = exact_matches.each_with_index.find { |a, _| values_match?(hash_including_recursive(e), a) }
       exact_matches.delete_at(index) if match
-    end
+    end && exact_matches.empty?
   end
 
   failure_message do
@@ -95,6 +98,7 @@ RSpec::Matchers.define :journal_events do |*events|
     MSG
   end
 end
-RSpec::Matchers.alias_matcher :journal_event, :journal_events
-RSpec::Matchers.define_negated_matcher :not_journal_events, :journal_events
-RSpec::Matchers.define_negated_matcher :not_journal_event, :journal_event
+
+RSpec::Matchers.alias_matcher :journal_event_including, :journal_events_including
+RSpec::Matchers.define_negated_matcher :not_journal_events_including, :journal_events_including
+RSpec::Matchers.define_negated_matcher :not_journal_event_including, :journal_event_including
