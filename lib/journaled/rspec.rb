@@ -19,8 +19,8 @@ end
 
 RSpec::Matchers.define_negated_matcher :not_journal_changes_to, :journal_changes_to
 
-RSpec::Matchers.define :journal_events do |events = {}|
-  attr_accessor :expected, :actual
+RSpec::Matchers.define :journal_events do |*events|
+  attr_accessor :expected, :actual, :matches, :nonmatches
 
   chain :with_schema_name, :expected_schema_name
   chain :with_partition_key, :expected_partition_key
@@ -39,13 +39,14 @@ RSpec::Matchers.define :journal_events do |events = {}|
   end
 
   match do |block|
-    @expected = [events].flatten(1).map { |e| { journaled_attributes: e } }
-    @expected.each { |e| e.merge!(journaled_schema_name: expected_schema_name) } if expected_schema_name
-    @expected.each { |e| e.merge!(journaled_partition_key: expected_partition_key) } if expected_partition_key
-    @expected.each { |e| e.merge!(journaled_stream_name: expected_stream_name) } if expected_stream_name
-    @expected.each { |e| e.merge!(journaled_enqueue_opts: expected_enqueue_opts) } if expected_enqueue_opts
-    @expected.each { |e| e.merge!(priority: expected_priority) } if expected_priority
-    @actual = []
+    events = [events.first || {}].flatten(1) unless events.length > 1
+    self.expected = events.map { |e| { journaled_attributes: e } }
+    expected.each { |e| e.merge!(journaled_schema_name: expected_schema_name) } if expected_schema_name
+    expected.each { |e| e.merge!(journaled_partition_key: expected_partition_key) } if expected_partition_key
+    expected.each { |e| e.merge!(journaled_stream_name: expected_stream_name) } if expected_stream_name
+    expected.each { |e| e.merge!(journaled_enqueue_opts: expected_enqueue_opts) } if expected_enqueue_opts
+    expected.each { |e| e.merge!(priority: expected_priority) } if expected_priority
+    self.actual = []
 
     callback = ->(_name, _started, _finished, _unique_id, payload) do
       event = payload[:event]
@@ -60,20 +61,35 @@ RSpec::Matchers.define :journal_events do |events = {}|
 
     ActiveSupport::Notifications.subscribed(callback, 'journaled.event.enqueue', &block)
 
-    expected.all? { |e| actual.any? { |a| values_match?(hash_including_recursive(e), a) } }
+    self.matches = actual.select do |a|
+      expected.any? { |e| values_match?(hash_including_recursive(e), a) }
+    end
+
+    self.nonmatches = actual - matches
+
+    matches.count == expected.count && expected.all? do |e|
+      matches.find { |a| values_match?(hash_including_recursive(e), a) }
+    end
   end
 
   failure_message do
     <<~MSG
-      Expected the code block to emit events consisting of (at least) the following:
-      ==============================================================================
-        #{expected.map(&:to_json).join("\n ")}
-      ==============================================================================
+      Expected the code block to journal exactly one matching event per expected event.
 
-      But instead, the following were emitted:
-      ==============================================================================
-        #{actual.map(&:to_json).join("\n  ")}
-      ==============================================================================
+      Expected Events (#{expected.count}):
+      ===============================================================================
+        #{expected.map(&:to_json).join("\n ")}
+      ===============================================================================
+
+      Matching Events (#{matches.count}):
+      ===============================================================================
+        #{matches.map(&:to_json).join("\n ")}
+      ===============================================================================
+
+      Non-Matching Events (#{nonmatches.count}):
+      ===============================================================================
+        #{nonmatches.map(&:to_json).join("\n  ")}
+      ===============================================================================
     MSG
   end
 end
