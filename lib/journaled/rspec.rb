@@ -67,8 +67,10 @@ RSpec::Matchers.define :journal_events do |*events|
 
     self.nonmatches = actual - matches
 
+    exact_matches = matches.dup
     matches.count == expected.count && expected.all? do |e|
-      matches.find { |a| values_match?(hash_including_recursive(e), a) }
+      match, index = exact_matches.each_with_index.find { |a, _| values_match?(hash_including_recursive(e), a) }
+      exact_matches.delete_at(index) if match
     end
   end
 
