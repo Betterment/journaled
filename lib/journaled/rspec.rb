@@ -41,7 +41,7 @@ RSpec::Matchers.define :journal_events_including do |*expected_events|
   end
 
   match do |block|
-    expected_events = [expected_events.first].flatten(1) if expected_events.length > 1
+    expected_events = [expected_events.first].flatten(1) unless expected_events.length > 1
 
     self.expected = expected_events.map { |e| { journaled_attributes: e } }
     expected.each { |e| e.merge!(journaled_schema_name: expected_schema_name) } if expected_schema_name
