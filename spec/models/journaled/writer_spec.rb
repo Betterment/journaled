@@ -1,11 +1,12 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Writer do
+  let(:event_class) { Class.new { include Journaled::Event } }
   subject { described_class.new journaled_event: journaled_event }
 
   describe '#initialize' do
     context 'when the Journaled Event does not implement all the necessary methods' do
-      let(:journaled_event) { instance_double(Journaled::Event) }
+      let(:journaled_event) { instance_double(event_class) }
 
       it 'raises on initialization' do
         expect { subject }.to raise_error RuntimeError, /An enqueued event must respond to/
@@ -15,7 +16,7 @@ RSpec.describe Journaled::Writer do
     context 'when the Journaled Event returns non-present values for some of the required methods' do
       let(:journaled_event) do
         instance_double(
-          Journaled::Event,
+          event_class,
           journaled_schema_name: nil,
           journaled_attributes: {},
           journaled_partition_key: '',
@@ -32,7 +33,7 @@ RSpec.describe Journaled::Writer do
     context 'when the Journaled Event complies with the API' do
       let(:journaled_event) do
         instance_double(
-          Journaled::Event,
+          event_class,
           journaled_schema_name: :fake_schema_name,
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
@@ -74,7 +75,7 @@ RSpec.describe Journaled::Writer do
     let(:journaled_enqueue_opts) { {} }
     let(:journaled_event) do
       instance_double(
-        Journaled::Event,
+        event_class,
         journaled_schema_name: 'fake_schema_name',
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
