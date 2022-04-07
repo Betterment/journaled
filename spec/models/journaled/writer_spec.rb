@@ -1,11 +1,12 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::Writer do
+  let(:event_class) { Class.new { include Journaled::Event } }
   subject { described_class.new journaled_event: journaled_event }
 
   describe '#initialize' do
     context 'when the Journaled Event does not implement all the necessary methods' do
-      let(:journaled_event) { double }
+      let(:journaled_event) { instance_double(event_class) }
 
       it 'raises on initialization' do
         expect { subject }.to raise_error RuntimeError, /An enqueued event must respond to/
@@ -14,7 +15,8 @@ RSpec.describe Journaled::Writer do
 
     context 'when the Journaled Event returns non-present values for some of the required methods' do
       let(:journaled_event) do
-        double(
+        instance_double(
+          event_class,
           journaled_schema_name: nil,
           journaled_attributes: {},
           journaled_partition_key: '',
@@ -30,7 +32,8 @@ RSpec.describe Journaled::Writer do
 
     context 'when the Journaled Event complies with the API' do
       let(:journaled_event) do
-        double(
+        instance_double(
+          event_class,
           journaled_schema_name: :fake_schema_name,
           journaled_attributes: { foo: :bar },
           journaled_partition_key: 'fake_partition_key',
@@ -71,8 +74,9 @@ RSpec.describe Journaled::Writer do
 
     let(:journaled_enqueue_opts) { {} }
     let(:journaled_event) do
-      double(
-        journaled_schema_name: :fake_schema_name,
+      instance_double(
+        event_class,
+        journaled_schema_name: 'fake_schema_name',
         journaled_attributes: journaled_event_attributes,
         journaled_partition_key: 'fake_partition_key',
         journaled_stream_name: 'my_app_events',
@@ -85,7 +89,9 @@ RSpec.describe Journaled::Writer do
       let(:journaled_event_attributes) { { foo: 1 } }
 
       it 'raises an error and does not enqueue anything' do
-        expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+        expect { subject.journal! }
+          .to raise_error(JSON::Schema::ValidationError)
+          .and not_journal_event_including(anything)
         expect(enqueued_jobs.count).to eq 0
       end
     end
@@ -95,7 +101,9 @@ RSpec.describe Journaled::Writer do
         let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: 1 } }
 
         it 'raises an error and does not enqueue anything' do
-          expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+          expect { subject.journal! }
+            .to raise_error(JSON::Schema::ValidationError)
+            .and not_journal_event_including(anything)
           expect(enqueued_jobs.count).to eq 0
         end
       end
@@ -104,7 +112,13 @@ RSpec.describe Journaled::Writer do
         let(:journaled_event_attributes) { { id: 'FAKE_UUID', event_type: 'fake_event', created_at: Time.zone.now, foo: :bar } }
 
         it 'creates a delivery with the app name passed through' do
-          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect { subject.journal! }
+            .to change { enqueued_jobs.count }.from(0).to(1)
+            .and journal_event_including(journaled_event_attributes)
+            .with_schema_name('fake_schema_name')
+            .with_partition_key('fake_partition_key')
+            .with_stream_name('my_app_events')
+            .with_enqueue_opts({})
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
 
@@ -124,6 +138,13 @@ RSpec.describe Journaled::Writer do
                 enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }
               end
             }.from(0).to(1)
+              .and journal_event_including(journaled_event_attributes)
+              .with_schema_name('fake_schema_name')
+              .with_partition_key('fake_partition_key')
+              .with_stream_name('my_app_events')
+              .with_priority(999)
+              .and not_journal_event_including(anything)
+              .with_enqueue_opts(priority: 999) # with_enqueue_opts looks at event itself
           end
         end
 
@@ -138,6 +159,12 @@ RSpec.describe Journaled::Writer do
                 enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }
               end
             }.from(0).to(1)
+              .and journal_event_including(journaled_event_attributes)
+              .with_schema_name('fake_schema_name')
+              .with_partition_key('fake_partition_key')
+              .with_stream_name('my_app_events')
+              .with_priority(13)
+              .with_enqueue_opts(priority: 13)
           end
         end
       end
@@ -154,7 +181,9 @@ RSpec.describe Journaled::Writer do
         end
 
         it 'raises an error and does not enqueue anything' do
-          expect { subject.journal! }.to raise_error JSON::Schema::ValidationError
+          expect { subject.journal! }
+            .to not_journal_events_including(anything)
+            .and raise_error JSON::Schema::ValidationError
           expect(enqueued_jobs.count).to eq 0
         end
       end
@@ -165,7 +194,16 @@ RSpec.describe Journaled::Writer do
         end
 
         it 'creates a delivery with the app name passed through' do
-          expect { subject.journal! }.to change { enqueued_jobs.count }.from(0).to(1)
+          expect { subject.journal! }
+            .to change { enqueued_jobs.count }.from(0).to(1)
+            .and journal_event_including(journaled_event_attributes)
+            .with_schema_name('fake_schema_name')
+            .with_partition_key('fake_partition_key')
+            .with_stream_name('my_app_events')
+            .with_enqueue_opts({})
+            .with_priority(Journaled.job_priority)
+            .and not_journal_event_including(anything)
+            .with_enqueue_opts(priority: Journaled.job_priority)
           expect(enqueued_jobs.first[:args].first).to include('stream_name' => 'my_app_events')
         end
       end

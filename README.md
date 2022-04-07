@@ -179,52 +179,6 @@ journaling. Note that the less-frequently-used methods `toggle`,
 `increment*`, `decrement*`, and `update_counters` are not intercepted at
 this time.
 
-### Tagged Events
-
-Events may be optionally marked as "tagged." This will add a `tags` field, intended for tracing and
-auditing purposes.
-
-```ruby
-class MyEvent
-  include Journaled::Event
-
-  journal_attributes :attr_1, :attr_2, tagged: true
-end
-```
-
-You may then use `Journaled.tag!` and `Journaled.tagged` inside of your
-`ApplicationController` and `ApplicationJob` classes (or anywhere else!) to tag
-all events with request and job metadata:
-
-```ruby
-class ApplicationController < ActionController::Base
-  before_action do
-    Journaled.tag!(request_id: request.request_id, current_user_id: current_user&.id)
-  end
-end
-
-class ApplicationJob < ActiveJob::Base
-  around_perform do |job, perform|
-    Journaled.tagged(job_id: job.id) { perform.call }
-  end
-end
-```
-
-This feature relies on `ActiveSupport::CurrentAttributes` under the hood, so these tags are local to
-the current thread, and will be cleared at the end of each request request/job.
-
-#### Testing
-
-If you use RSpec (and have required `journaled/rspec` in your
-`spec/rails_helper.rb`), you can regression-protect important journaling
-config with the `journal_changes_to` matcher:
-
-```ruby
-it "journals exactly these things or there will be heck to pay" do
-  expect(User).to journal_changes_to(:email, :first_name, :last_name, as: :identity_change)
-end
-```
-
 ### Custom Journaling
 
 For every custom implementation of journaling in your application, define the JSON schema for the attributes in your event.
@@ -309,6 +263,40 @@ An event like the following will be journaled to kinesis:
 }
 ```
 
+### Tagged Events
+
+Events may be optionally marked as "tagged." This will add a `tags` field, intended for tracing and
+auditing purposes.
+
+```ruby
+class MyEvent
+  include Journaled::Event
+
+  journal_attributes :attr_1, :attr_2, tagged: true
+end
+```
+
+You may then use `Journaled.tag!` and `Journaled.tagged` inside of your
+`ApplicationController` and `ApplicationJob` classes (or anywhere else!) to tag
+all events with request and job metadata:
+
+```ruby
+class ApplicationController < ActionController::Base
+  before_action do
+    Journaled.tag!(request_id: request.request_id, current_user_id: current_user&.id)
+  end
+end
+
+class ApplicationJob < ActiveJob::Base
+  around_perform do |job, perform|
+    Journaled.tagged(job_id: job.id) { perform.call }
+  end
+end
+```
+
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood, so these tags are local to
+the current thread, and will be cleared at the end of each request request/job.
+
 ### Helper methods for custom events
 
 Journaled provides a couple helper methods that may be useful in your
@@ -351,6 +339,102 @@ Returns one of the following in order of preference:
 
 In order for this to be most useful, you must configure your controller
 as described in [Change Journaling](#change-journaling) above.
+
+### Testing
+
+If you use RSpec, you can test for journaling behaviors with the
+`journal_event(s)_including` and `journal_changes_to` matchers. First, make
+sure to require `journaled/rspec` in your spec setup (e.g.
+`spec/rails_helper.rb`):
+
+```ruby
+require 'journaled/rspec'
+```
+
+#### Checking for specific events
+
+The `journal_event_including` and `journal_events_including` matchers allow you
+to check for one or more matching event being journaled:
+
+```ruby
+expect { my_code }
+  .to journal_event_including(name: 'foo')
+expect { my_code }
+  .to journal_events_including({ name: 'foo', value: 1 }, { name: 'foo', value: 2 })
+```
+
+This will only perform matches on the specified fields (and will not match one
+way or the other against unspecified fields). These matchers will also ignore
+any extraneous events that are not positively matched (as they may be unrelated
+to behavior under test).
+
+When writing tests, pairing every positive assertion with a negative assertion
+is a good practice, and so negative matching is also supported (via both
+`.not_to` and `.to not_`):
+
+```ruby
+expect { my_code }
+  .not_to journal_events_including({ name: 'foo' }, { name: 'bar' })
+expect { my_code }
+  .to raise_error(SomeError)
+  .and not_journal_event_including(name: 'foo') # the `not_` variant can chain off of `.and`
+```
+
+Several chainable modifiers are also available:
+
+```ruby
+expect { my_code }.to journal_event_including(name: 'foo')
+  .with_schema_name('my_event_schema')
+  .with_partition_key(user.id)
+  .with_stream_name('my_stream_name')
+  .with_enqueue_opts(run_at: future_time)
+  .with_priority(999)
+```
+
+All of this can be chained together to test for multiple sets of events with
+multiple sets of options:
+
+```ruby
+expect { subject.journal! }
+  .to journal_events_including({ name: 'event1', value: 300 }, { name: 'event2', value: 200 })
+    .with_priority(10)
+  .and journal_event_including(name: 'event3', value: 100)
+    .with_priority(20)
+  .and not_journal_event_including(name: 'other_event')
+```
+
+#### Checking for `Journaled::Changes` declarations
+
+The `journal_changes_to` matcher checks against the list of attributes specified
+on the model. It does not actually test that an event is emitted within a given
+codepath, and is instead intended to guard against accidental regressions that
+may impact external consumers of these events:
+
+```ruby
+it "journals exactly these things or there will be heck to pay" do
+  expect(User).to journal_changes_to(:email, :first_name, :last_name, as: :identity_change)
+end
+```
+
+### Instrumentation
+
+When an event is enqueued, an `ActiveSupport::Notification` titled
+`journaled.event.enqueue` is emitted. Its payload will include the `:event` and
+its background job `:priority`.
+
+This can be forwarded along to your preferred monitoring solution via a Rails
+initializer:
+
+```ruby
+ActiveSupport::Notifications.subscribe('journaled.event.enqueue') do |*args|
+  payload = ActiveSupport::Notifications::Event.new(*args).payload
+  journaled_event = payload[:event]
+
+  tags = { priority: payload[:priority], event_type: journaled_event.journaled_attributes[:event_type] }
+
+  Statsd.increment('journaled.event.enqueue', tags: tags.map { |k,v| "#{k.to_s[0..64]}:#{v.to_s[0..255]}" })
+end
+```
 
 ## Upgrades
 

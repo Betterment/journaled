@@ -63,7 +63,7 @@ module Journaled::Event
   end
 
   included do
-    cattr_accessor(:journaled_enqueue_opts, instance_writer: false) { {} }
+    class_attribute :journaled_enqueue_opts, default: {}
 
     journal_attributes :id, :event_type, :created_at
   end
