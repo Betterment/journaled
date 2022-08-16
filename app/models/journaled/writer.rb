@@ -26,7 +26,12 @@ class Journaled::Writer
 
   def journal!
     validate!
-    enqueue_before_commit!
+
+    if Journaled::Connection.available?
+      Journaled::Connection.stage!(journaled_event)
+    else
+      self.class.enqueue!(journaled_event)
+    end
   end
 
   def self.enqueue!(*events)
@@ -62,22 +67,6 @@ class Journaled::Writer
     schema_validator('base_event').validate! serialized_event
     schema_validator('tagged_event').validate! serialized_event if journaled_event.tagged?
     schema_validator(journaled_schema_name).validate! serialized_event
-  end
-
-  def enqueue_before_commit!
-    if connection_provider.connection._journaled_transaction_open?
-      stage!
-    else
-      self.class.enqueue!(journaled_event)
-    end
-  end
-
-  def stage!
-    connection_provider.connection._journaled_pending_events << journaled_event
-  end
-
-  def connection_provider
-    ActiveRecord::Base # TODO: Use underlying ActiveRecord Job class
   end
 
   def schema_validator(schema_name)
