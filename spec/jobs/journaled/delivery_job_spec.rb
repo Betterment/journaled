@@ -75,7 +75,7 @@ RSpec.describe Journaled::DeliveryJob do
       let(:stream_name) { nil }
 
       it 'raises an KeyError error' do
-        expect { described_class.perform_now(**args) }.to raise_error ArgumentError, 'missing keyword: :stream_name'
+        expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
       end
     end
 
