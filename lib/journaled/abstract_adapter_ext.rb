@@ -3,14 +3,13 @@ module Journaled
     delegate :_journaled_pending_events, to: :_journaled_transaction_handler
 
     def self.included(klass)
-      klass.alias_method :_journaled_transaction_open?, :transaction_open?
-      klass.prepend TestBehaviors if Rails.env.test?
+      klass.set_callback(:checkout, :before) do
+        @_journaled_transaction_handler = nil
+      end
     end
 
-    module TestBehaviors
-      def _journaled_transaction_open?
-        super && (open_transactions > 1 || current_transaction.joinable?)
-      end
+    def _journaled_transaction_joinable?
+      transaction_open? && _journaled_transaction_handler.joinable?
     end
 
     private
@@ -25,16 +24,21 @@ module Journaled
 
     class TransactionHandler
       def initialize(connection:)
-        raise TransactionSafetyError, <<~MSG unless connection._journaled_transaction_open?
-          By default, journaled events must be enqueued within a database transaction.
+        raise TransactionSafetyError, <<~MSG unless connection.transaction_open?
+          Transaction not open! By default, journaled event batching requires an open database transaction.
         MSG
 
         connection.add_transaction_record(self)
         @active = true
+        @joinable = true
       end
 
       def active?
         @active
+      end
+
+      def joinable?
+        @joinable
       end
 
       def _journaled_pending_events
@@ -48,12 +52,15 @@ module Journaled
       # run callbacks before/after commit (or after rollback).
       def before_committed!
         Writer.enqueue!(*_journaled_pending_events)
+        @joinable = false
+      end
+
+      def committed!(*)
         @active = false
       end
 
-      def committed!(*); end
-
       def rolledback!(*)
+        @joinable = false
         @active = false
       end
 

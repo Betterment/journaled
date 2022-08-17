@@ -1,18 +1,31 @@
 module Journaled
   module Connection
+    module TestBehaviors
+      def transaction_joinable?
+        # Transactional fixtures wrap all tests in an outer, non-joinable transaction:
+        super && (connection.open_transactions > 1 || connection.current_transaction.joinable?)
+      end
+    end
+
     class << self
+      prepend TestBehaviors if Rails.env.test?
+
       def available?
-        Journaled.transactional_batching_enabled && transaction_open?
+        Journaled.transactional_batching_enabled && transaction_joinable?
       end
 
       def stage!(event)
+        raise TransactionSafetyError, <<~MSG unless transaction_joinable?
+          Transaction not available! By default, journaled event batching requires an open database transaction.
+        MSG
+
         connection._journaled_pending_events << event
       end
 
       private
 
-      def transaction_open?
-        connection._journaled_transaction_open?
+      def transaction_joinable?
+        connection._journaled_transaction_joinable?
       end
 
       def connection
