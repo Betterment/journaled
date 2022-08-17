@@ -444,7 +444,7 @@ gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
 
-### Upgrading from 4.1.0
+### Upgrading from 4.3.0
 
 Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0
 introduces a new transaction-aware feature that will bundle up all events

@@ -5,7 +5,7 @@ RSpec.describe Journaled::DeliveryJob do
   let(:partition_key) { 'fake_partition_key' }
   let(:serialized_event) { '{"foo":"bar"}' }
   let(:kinesis_client) { Aws::Kinesis::Client.new(stub_responses: true) }
-  let(:args) { { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name } }
+  let(:args) { [{ serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }] }
 
   describe '#perform' do
     let(:return_status_body) { { shard_id: '101', sequence_number: '101123' } }
@@ -21,7 +21,7 @@ RSpec.describe Journaled::DeliveryJob do
     end
 
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-      events = described_class.perform_now(**args)
+      events = described_class.perform_now(*args)
 
       expect(events.count).to eq 1
       expect(events.first.shard_id).to eq '101'
@@ -61,7 +61,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'initializes a Kinesis client with assume role credentials' do
-        described_class.perform_now(**args)
+        described_class.perform_now(*args)
 
         expect(Aws::AssumeRoleCredentials).to have_received(:new).with(
           client: aws_sts_client,
@@ -75,7 +75,42 @@ RSpec.describe Journaled::DeliveryJob do
       let(:stream_name) { nil }
 
       it 'raises an KeyError error' do
-        expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
+        expect { described_class.perform_now(*args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
+      end
+    end
+
+    unless Gem::Version.new(Journaled::VERSION) < Gem::Version.new('6.0.0')
+      raise <<~MSG
+        Hey! I see that you're bumping the version to 6.0!
+
+        This is a reminder to remove the `legacy_kwargs` argument (and related logic) from `Journaled::DeliveryJob`
+
+        Thanks!
+      MSG
+    end
+
+    context 'when supplying legacy kwargs (a single event) instead of a list of events' do
+      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name } }
+
+      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
+        events = described_class.perform_now(**args)
+
+        expect(events.count).to eq 1
+        expect(events.first.shard_id).to eq '101'
+        expect(events.first.sequence_number).to eq '101123'
+        expect(kinesis_client).to have_received(:put_record).with(
+          stream_name: 'test_events',
+          data: '{"foo":"bar"}',
+          partition_key: 'fake_partition_key',
+        )
+      end
+
+      context 'when the stream name is not set' do
+        let(:stream_name) { nil }
+
+        it 'raises an KeyError error' do
+          expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
+        end
       end
     end
 
@@ -86,7 +121,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(*args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(
           "Kinesis Error - Server Error occurred - Aws::Kinesis::Errors::InternalFailure",
         ).once
@@ -100,7 +135,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(*args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(/\AKinesis Error/).once
       end
     end
@@ -111,7 +146,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'raises an error that subclasses Aws::Kinesis::Errors::ServiceError' do
-        expect { described_class.perform_now(**args) }.to raise_error Aws::Kinesis::Errors::ServiceError
+        expect { described_class.perform_now(*args) }.to raise_error Aws::Kinesis::Errors::ServiceError
       end
     end
 
@@ -121,7 +156,7 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       it 'raises an AccessDeniedException error' do
-        expect { described_class.perform_now(**args) }.to raise_error Aws::Kinesis::Errors::AccessDeniedException
+        expect { described_class.perform_now(*args) }.to raise_error Aws::Kinesis::Errors::AccessDeniedException
       end
     end
 
@@ -132,7 +167,7 @@ RSpec.describe Journaled::DeliveryJob do
 
       it 'catches the error and re-raises a subclass of NotTrulyExceptionalError and logs about the failure' do
         allow(Rails.logger).to receive(:error)
-        expect { described_class.perform_now(**args) }.to raise_error described_class::KinesisTemporaryFailure
+        expect { described_class.perform_now(*args) }.to raise_error described_class::KinesisTemporaryFailure
         expect(Rails.logger).to have_received(:error).with(
           "Kinesis Error - Networking Error occurred - Seahorse::Client::NetworkingError",
         ).once
