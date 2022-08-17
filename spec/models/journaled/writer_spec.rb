@@ -290,6 +290,30 @@ RSpec.describe Journaled::Writer do
             .and journal_event_including(id: 'FAKE_UUID_5', event_type: 'fake_event_5')
         end
       end
+
+      context 'when an event is enqueued in its own before_commit callback' do
+        before do
+          before_commit_callback = -> { described_class.new(journaled_event: fake_event(9)).journal! }
+          klass = Class.new(ActiveRecord::Base) { self.table_name = 'widgets' }
+          klass.before_commit { before_commit_callback.call }
+          stub_const('Widget', klass)
+        end
+
+        it 'falls back to enqueuing the event in its own job (because TransactionHandler#joinable? is false)' do
+          expect {
+            ActiveRecord::Base.transaction do
+              expect { described_class.new(journaled_event: fake_event(7)).journal! }
+                .to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
+              expect { Widget.create! }
+                .to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+            end
+          }.to change { enqueued_jobs.count }.from(0).to(2)
+            .and journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
+            .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+        end
+      end
     end
   end
 end
