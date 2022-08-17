@@ -1,18 +1,10 @@
 module Journaled
   module AbstractAdapterExt
-    delegate :_journaled_pending_events, to: :_journaled_transaction_handler
-
     def self.included(klass)
       klass.set_callback(:checkout, :before) do
         @_journaled_transaction_handler = nil
       end
     end
-
-    def _journaled_transaction_joinable?
-      transaction_open? && _journaled_transaction_handler.joinable?
-    end
-
-    private
 
     def _journaled_transaction_handler
       if @_journaled_transaction_handler&.active?
@@ -41,8 +33,8 @@ module Journaled
         @joinable
       end
 
-      def _journaled_pending_events
-        @_journaled_pending_events ||= []
+      def staged_events
+        @staged_events ||= []
       end
 
       # The following methods adhere to the API contract defined by:
@@ -51,7 +43,7 @@ module Journaled
       # This allows our TransactionHandler to act as a "transaction record" and
       # run callbacks before/after commit (or after rollback).
       def before_committed!
-        Writer.enqueue!(*_journaled_pending_events)
+        Writer.enqueue!(*staged_events)
         @joinable = false
       end
 
