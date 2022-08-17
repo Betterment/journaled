@@ -210,22 +210,11 @@ RSpec.describe Journaled::Writer do
     end
 
     context 'when inside of a transaction' do
-      let(:journaled_event_1) do
+      def fake_event(num)
         instance_double(
           event_class,
           journaled_schema_name: 'fake_schema_name',
-          journaled_attributes: { id: 'FAKE_UUID_1', event_type: 'fake_event_1', created_at: Time.zone.now, foo: :bar },
-          journaled_partition_key: 'fake_partition_key',
-          journaled_stream_name: 'my_app_events',
-          journaled_enqueue_opts: journaled_enqueue_opts,
-          tagged?: false,
-        )
-      end
-      let(:journaled_event_2) do
-        instance_double(
-          event_class,
-          journaled_schema_name: 'fake_schema_name',
-          journaled_attributes: { id: 'FAKE_UUID_2', event_type: 'fake_event_2', created_at: Time.zone.now, foo: :bar },
+          journaled_attributes: { id: "FAKE_UUID_#{num}", event_type: "fake_event_#{num}", created_at: Time.zone.now, foo: :bar },
           journaled_partition_key: 'fake_partition_key',
           journaled_stream_name: 'my_app_events',
           journaled_enqueue_opts: journaled_enqueue_opts,
@@ -236,16 +225,70 @@ RSpec.describe Journaled::Writer do
       it 'batches multiple events and does not enqueue until the end of a transaction' do
         expect {
           ActiveRecord::Base.transaction do
-            expect { described_class.new(journaled_event: journaled_event_1).journal! }
+            expect { described_class.new(journaled_event: fake_event(1)).journal! }
               .to not_change { enqueued_jobs.count }.from(0)
               .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
-            expect { described_class.new(journaled_event: journaled_event_2).journal! }
+            expect { described_class.new(journaled_event: fake_event(2)).journal! }
               .to not_change { enqueued_jobs.count }.from(0)
               .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
           end
         }.to change { enqueued_jobs.count }.from(0).to(1)
           .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
           .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+      end
+
+      context 'when a transaction rolls back' do
+        it 'batches multiple events and does not enqueue until the end of a transaction' do
+          expect {
+            ActiveRecord::Base.transaction do
+              expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                .to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                .to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+              raise ActiveRecord::Rollback
+            end
+          }.to not_change { enqueued_jobs.count }.from(0)
+            .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+            .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+
+          # Make sure that prior transaction does not impact behavior of future transactions:
+          expect {
+            ActiveRecord::Base.transaction do
+              expect { described_class.new(journaled_event: fake_event(3)).journal! }
+                .to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+            end
+          }.to change { enqueued_jobs.count }.from(0).to(1)
+            .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+            .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            .and journal_event_including(id: 'FAKE_UUID_3', event_type: 'fake_event_3')
+        end
+      end
+
+      context 'when transactional batching is disabled' do
+        around do |example|
+          Journaled.transactional_batching_enabled = false
+          example.run
+        ensure
+          Journaled.transactional_batching_enabled = true
+        end
+
+        it 'does not batch the events, and enqueues them as they are journaled' do
+          expect {
+            ActiveRecord::Base.transaction do
+              expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                .to change { enqueued_jobs.count }.from(0).to(1)
+                .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              expect { described_class.new(journaled_event: fake_event(5)).journal! }
+                .to change { enqueued_jobs.count }.from(1).to(2)
+                .and journal_event_including(id: 'FAKE_UUID_5', event_type: 'fake_event_5')
+            end
+          }.to change { enqueued_jobs.count }.from(0).to(2)
+            .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+            .and journal_event_including(id: 'FAKE_UUID_5', event_type: 'fake_event_5')
+        end
       end
     end
   end
