@@ -27,10 +27,12 @@ class Journaled::Writer
   def journal!
     validate!
 
-    if Journaled::Connection.available?
-      Journaled::Connection.stage!(journaled_event)
-    else
-      self.class.enqueue!(journaled_event)
+    ActiveSupport::Notifications.instrument('journaled.event.stage', event: journaled_event, **journaled_enqueue_opts) do
+      if Journaled::Connection.available?
+        Journaled::Connection.stage!(journaled_event)
+      else
+        self.class.enqueue!(journaled_event)
+      end
     end
   end
 
