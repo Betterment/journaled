@@ -208,5 +208,45 @@ RSpec.describe Journaled::Writer do
         end
       end
     end
+
+    context 'when inside of a transaction' do
+      let(:journaled_event_1) do
+        instance_double(
+          event_class,
+          journaled_schema_name: 'fake_schema_name',
+          journaled_attributes: { id: 'FAKE_UUID_1', event_type: 'fake_event_1', created_at: Time.zone.now, foo: :bar },
+          journaled_partition_key: 'fake_partition_key',
+          journaled_stream_name: 'my_app_events',
+          journaled_enqueue_opts: journaled_enqueue_opts,
+          tagged?: false,
+        )
+      end
+      let(:journaled_event_2) do
+        instance_double(
+          event_class,
+          journaled_schema_name: 'fake_schema_name',
+          journaled_attributes: { id: 'FAKE_UUID_2', event_type: 'fake_event_2', created_at: Time.zone.now, foo: :bar },
+          journaled_partition_key: 'fake_partition_key',
+          journaled_stream_name: 'my_app_events',
+          journaled_enqueue_opts: journaled_enqueue_opts,
+          tagged?: false,
+        )
+      end
+
+      it 'batches multiple events and does not enqueue until the end of a transaction' do
+        expect {
+          ActiveRecord::Base.transaction do
+            expect { described_class.new(journaled_event: journaled_event_1).journal! }
+              .to not_change { enqueued_jobs.count }.from(0)
+              .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+            expect { described_class.new(journaled_event: journaled_event_2).journal! }
+              .to not_change { enqueued_jobs.count }.from(0)
+              .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+          end
+        }.to change { enqueued_jobs.count }.from(0).to(1)
+          .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+          .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+      end
+    end
   end
 end
