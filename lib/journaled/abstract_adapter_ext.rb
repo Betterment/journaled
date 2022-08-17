@@ -9,7 +9,7 @@ module Journaled
 
     module TestBehaviors
       def _journaled_transaction_open?
-        open_transactions > 1 || current_transaction.joinable?
+        super && (open_transactions > 1 || current_transaction.joinable?)
       end
     end
 
