@@ -1,11 +1,13 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::DeliveryJob do
-  let(:stream_name) { 'test_events' }
-  let(:partition_key) { 'fake_partition_key' }
-  let(:serialized_event) { '{"foo":"bar"}' }
   let(:kinesis_client) { Aws::Kinesis::Client.new(stub_responses: true) }
-  let(:args) { [{ serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name }] }
+  let(:args) do
+    [
+      { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: 'test_events' },
+      { serialized_event: '{"baz":"bat"}', partition_key: 'fake_partition_key_2', stream_name: 'test_events_2' },
+    ]
+  end
 
   describe '#perform' do
     let(:return_status_body) { { shard_id: '101', sequence_number: '101123' } }
@@ -23,13 +25,18 @@ RSpec.describe Journaled::DeliveryJob do
     it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
       events = described_class.perform_now(*args)
 
-      expect(events.count).to eq 1
+      expect(events.count).to eq 2
       expect(events.first.shard_id).to eq '101'
       expect(events.first.sequence_number).to eq '101123'
       expect(kinesis_client).to have_received(:put_record).with(
         stream_name: 'test_events',
         data: '{"foo":"bar"}',
         partition_key: 'fake_partition_key',
+      )
+      expect(kinesis_client).to have_received(:put_record).with(
+        stream_name: 'test_events_2',
+        data: '{"baz":"bat"}',
+        partition_key: 'fake_partition_key_2',
       )
     end
 
@@ -72,9 +79,9 @@ RSpec.describe Journaled::DeliveryJob do
     end
 
     context 'when the stream name is not set' do
-      let(:stream_name) { nil }
+      let(:args) { [{ serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: nil }] }
 
-      it 'raises an KeyError error' do
+      it 'raises a KeyError error' do
         expect { described_class.perform_now(*args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
       end
     end
@@ -83,14 +90,16 @@ RSpec.describe Journaled::DeliveryJob do
       raise <<~MSG
         Hey! I see that you're bumping the version to 6.0!
 
-        This is a reminder to remove the `legacy_kwargs` argument (and related logic) from `Journaled::DeliveryJob`
+        This is a reminder to:
+        - Remove the `legacy_kwargs` argument (and related logic) from `Journaled::DeliveryJob`
+        - Remove the related test context below
 
         Thanks!
       MSG
     end
 
     context 'when supplying legacy kwargs (a single event) instead of a list of events' do
-      let(:args) { { serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name } }
+      let(:args) { { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: 'test_events' } }
 
       it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
         events = described_class.perform_now(**args)
@@ -106,9 +115,9 @@ RSpec.describe Journaled::DeliveryJob do
       end
 
       context 'when the stream name is not set' do
-        let(:stream_name) { nil }
+        let(:args) { { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: nil } }
 
-        it 'raises an KeyError error' do
+        it 'raises a KeyError error' do
           expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
         end
       end
