@@ -13,8 +13,8 @@ module Journaled
     end
 
     def perform(*events, **legacy_kwargs)
-      @kinesis_records = events.map { |e| KinesisRecord.new(**e) }
-      @kinesis_records << KinesisRecord.new(**legacy_kwargs.delete_if { |_k, v| v.nil? }) if legacy_kwargs.any?
+      events << legacy_kwargs if legacy_kwargs.present?
+      @kinesis_records = events.map { |e| KinesisRecord.new(**e.delete_if { |_k, v| v.nil? }) }
 
       journal! if Journaled.enabled?
     end

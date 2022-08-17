@@ -81,7 +81,7 @@ RSpec.describe Journaled::DeliveryJob do
     context 'when the stream name is not set' do
       let(:args) { [{ serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: nil }] }
 
-      it 'raises a KeyError error' do
+      it 'raises an ArgumentError error' do
         expect { described_class.perform_now(*args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
       end
     end
@@ -117,7 +117,7 @@ RSpec.describe Journaled::DeliveryJob do
       context 'when the stream name is not set' do
         let(:args) { { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: nil } }
 
-        it 'raises a KeyError error' do
+        it 'raises an ArgumentError' do
           expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
         end
       end
