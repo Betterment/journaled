@@ -19,6 +19,10 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 2.6"
 
+  if File.exist?('UPGRADING')
+    s.post_install_message = File.read("UPGRADING")
+  end
+
   s.add_dependency "activejob"
   s.add_dependency "activerecord"
   s.add_dependency "aws-sdk-kinesis", "< 2"

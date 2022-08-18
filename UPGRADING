@@ -1,0 +1,19 @@
+============================
+NOTE FOR UPGRADING JOURNALED
+============================
+
+If you are upgrading from an older `journaled` version, please be sure to
+increment only ONE major version at a time.
+
+⚠️ IF YOU ARE UPGRADING FROM 3.1 OR EARLIER, you should NOT USE THIS VERSION. ⚠️
+
+Instead, install a version of the gem that is backwards compatible with your
+app's currently-enqueued journaled jobs:
+
+gem 'journaled', '~> 4.2.0' # upgrading from 3.0-3.1
+gem 'journaled', '~> 3.1.0' # upgrading from 2.0-2.5
+
+For additional upgrade instructions (e.g. how to handle a few BREAKING CHANGES
+to environment variables), please see the README:
+https://github.com/Betterment/journaled/blob/v5.0.0/README.md#upgrades
+
