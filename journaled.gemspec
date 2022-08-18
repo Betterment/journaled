@@ -19,9 +19,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 2.6"
 
-  if File.exist?('UPGRADING')
-    s.post_install_message = File.read("UPGRADING")
-  end
+  s.post_install_message = File.read("UPGRADING") if File.exist?('UPGRADING')
 
   s.add_dependency "activejob"
   s.add_dependency "activerecord"
