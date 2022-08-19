@@ -265,6 +265,39 @@ RSpec.describe Journaled::Writer do
             .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
             .and journal_event_including(id: 'FAKE_UUID_3', event_type: 'fake_event_3')
         end
+
+        context 'when there is a savepoint transaction with events' do
+          context 'and it completes' do
+            it 'emits the events enqueued within the savepoint transaction within the same batch' do
+              expect {
+                ActiveRecord::Base.transaction do
+                  described_class.new(journaled_event: fake_event(1)).journal!
+                  ActiveRecord::Base.transaction(requires_new: true) do
+                    described_class.new(journaled_event: fake_event(2)).journal!
+                  end
+                end
+              }.to change { enqueued_jobs.count }.from(0).to(1)
+                .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            end
+          end
+
+          context 'and it rolls back' do
+            it 'does not emit the events enqueued within the savepoint transaction' do
+              expect {
+                ActiveRecord::Base.transaction do
+                  described_class.new(journaled_event: fake_event(1)).journal!
+                  ActiveRecord::Base.transaction(requires_new: true) do
+                    described_class.new(journaled_event: fake_event(2)).journal!
+                    raise ActiveRecord::Rollback
+                  end
+                end
+              }.to change { enqueued_jobs.count }.from(0).to(1)
+                .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            end
+          end
+        end
       end
 
       context 'when transactional batching is disabled' do
@@ -297,6 +330,19 @@ RSpec.describe Journaled::Writer do
           klass = Class.new(ActiveRecord::Base) { self.table_name = 'widgets' }
           klass.before_commit { before_commit_callback.call }
           stub_const('Widget', klass)
+        end
+
+        context 'and no other event is enqueued' do
+          it 'falls back to enqueuing the event in its own job (because TransactionHandler#joinable? is false)' do
+            expect {
+              ActiveRecord::Base.transaction do
+                expect { Widget.create! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+              end
+            }.to change { enqueued_jobs.count }.from(0).to(1)
+              .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+          end
         end
 
         it 'falls back to enqueuing the event in its own job (because TransactionHandler#joinable? is false)' do
