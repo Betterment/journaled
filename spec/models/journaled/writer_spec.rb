@@ -267,33 +267,63 @@ RSpec.describe Journaled::Writer do
         end
 
         context 'when there is a savepoint transaction with events' do
-          context 'and it completes' do
-            it 'emits the events enqueued within the savepoint transaction within the same batch' do
-              expect {
-                ActiveRecord::Base.transaction do
-                  described_class.new(journaled_event: fake_event(1)).journal!
+          it 'emits the events enqueued within the savepoint transaction within a separate batch' do
+            expect {
+              ActiveRecord::Base.transaction do
+                expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                expect {
                   ActiveRecord::Base.transaction(requires_new: true) do
-                    described_class.new(journaled_event: fake_event(2)).journal!
+                    expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                      .to not_change { enqueued_jobs.count }.from(0)
+                      .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
                   end
-                end
-              }.to change { enqueued_jobs.count }.from(0).to(1)
-                .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
-                .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
-            end
+                }.to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+                  .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              end
+            }.to change { enqueued_jobs.count }.from(0).to(2)
+              .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
           end
 
-          context 'and it rolls back' do
+          context 'and the inner transaction rolls back' do
             it 'does not emit the events enqueued within the savepoint transaction' do
               expect {
                 ActiveRecord::Base.transaction do
-                  described_class.new(journaled_event: fake_event(1)).journal!
-                  ActiveRecord::Base.transaction(requires_new: true) do
-                    described_class.new(journaled_event: fake_event(2)).journal!
-                    raise ActiveRecord::Rollback
-                  end
+                  expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                    .to not_change { enqueued_jobs.count }.from(0)
+                  expect {
+                    ActiveRecord::Base.transaction(requires_new: true) do
+                      expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                        .to not_change { enqueued_jobs.count }.from(0)
+                      raise ActiveRecord::Rollback
+                    end
+                  }.to not_change { enqueued_jobs.count }.from(0)
                 end
               }.to change { enqueued_jobs.count }.from(0).to(1)
                 .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            end
+          end
+
+          context 'and the outer transaction rolls back' do
+            it 'does not emit any events' do
+              expect {
+                ActiveRecord::Base.transaction do
+                  expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                    .to not_change { enqueued_jobs.count }.from(0)
+                  expect {
+                    ActiveRecord::Base.transaction(requires_new: true) do
+                      expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                        .to not_change { enqueued_jobs.count }.from(0)
+                    end
+                  }.to not_change { enqueued_jobs.count }.from(0)
+                  raise ActiveRecord::Rollback
+                end
+              }.to not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
                 .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
             end
           end
@@ -332,32 +362,32 @@ RSpec.describe Journaled::Writer do
           stub_const('Widget', klass)
         end
 
-        context 'and no other event is enqueued' do
-          it 'falls back to enqueuing the event in its own job (because TransactionHandler#joinable? is false)' do
-            expect {
-              ActiveRecord::Base.transaction do
-                expect { Widget.create! }
-                  .to not_change { enqueued_jobs.count }.from(0)
-                  .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
-              end
-            }.to change { enqueued_jobs.count }.from(0).to(1)
-              .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
-          end
-        end
-
-        it 'falls back to enqueuing the event in its own job (because TransactionHandler#joinable? is false)' do
+        it 'still enqeues the event' do
           expect {
             ActiveRecord::Base.transaction do
-              expect { described_class.new(journaled_event: fake_event(7)).journal! }
-                .to not_change { enqueued_jobs.count }.from(0)
-                .and not_journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
               expect { Widget.create! }
                 .to not_change { enqueued_jobs.count }.from(0)
                 .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
             end
-          }.to change { enqueued_jobs.count }.from(0).to(2)
-            .and journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
+          }.to change { enqueued_jobs.count }.from(0).to(1)
             .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+        end
+
+        context 'when events were already batched up' do
+          it 'enqueues the event in a new batch (because TransactionHandler#joinable? is false)' do
+            expect {
+              ActiveRecord::Base.transaction do
+                expect { described_class.new(journaled_event: fake_event(7)).journal! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
+                expect { Widget.create! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+              end
+            }.to change { enqueued_jobs.count }.from(0).to(2)
+              .and journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
+              .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
+          end
         end
       end
     end

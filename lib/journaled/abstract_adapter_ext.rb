@@ -1,28 +1,34 @@
+require 'active_record/connection_adapters/abstract/transaction'
+
 module Journaled
-  module AbstractAdapterExt
-    def self.included(klass)
-      klass.set_callback(:checkout, :before) do
-        @_journaled_transaction_handler = nil
-      end
+  module TransactionExt
+    def before_commit_records
+      @_journaled_committing_records = true
+      super
     end
 
     def _journaled_transaction_handler
       if @_journaled_transaction_handler&.active?
         @_journaled_transaction_handler
       else
-        @_journaled_transaction_handler = TransactionHandler.new(connection: self)
+        @_journaled_transaction_handler = TransactionHandler.new(txn: self).tap do |txn_handler|
+          txn_handler.joinable = !@_journaled_committing_records
+        end
       end
     end
 
     class TransactionHandler
-      def initialize(connection:)
-        raise TransactionSafetyError, <<~MSG unless connection.transaction_open?
+      attr_writer :joinable
+
+      def initialize(txn:)
+        raise TransactionSafetyError, <<~MSG unless txn.connection.transaction_open?
           Transaction not open! By default, journaled event batching requires an open database transaction.
         MSG
 
-        connection.add_transaction_record(self)
+        txn.add_record(self)
+        @txn = txn
+        self.joinable = true
         @active = true
-        @joinable = true
       end
 
       def active?
@@ -54,6 +60,14 @@ module Journaled
       def rolledback!(*)
         @joinable = false
         @active = false
+      end
+
+      if Rails::VERSION::MAJOR < 6
+        # With Rails 6.0, this method is no longer necessary, as its behavior was inlined here:
+        # https://github.com/rails/rails/blob/6-0-stable/activerecord/lib/active_record/connection_adapters/abstract/transaction.rb#L130
+        def add_to_transaction
+          @txn.connection.add_transaction_record(self)
+        end
       end
 
       def trigger_transactional_callbacks?

@@ -10,13 +10,13 @@ module Journaled
           Transaction not available! By default, journaled event batching requires an open database transaction.
         MSG
 
-        connection._journaled_transaction_handler.staged_events << event
+        connection.current_transaction._journaled_transaction_handler.staged_events << event
       end
 
       private
 
       def transaction_joinable?
-        connection.transaction_open? && connection._journaled_transaction_handler.joinable?
+        connection.transaction_open? && connection.current_transaction._journaled_transaction_handler.joinable?
       end
 
       def connection
