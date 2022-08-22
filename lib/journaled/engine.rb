@@ -6,7 +6,7 @@ module Journaled
       end
 
       ActiveSupport.on_load(:active_record) do
-        require 'journaled/abstract_adapter_ext'
+        require 'journaled/transaction_ext'
         ActiveRecord::ConnectionAdapters::Transaction.prepend Journaled::TransactionExt
       end
     end
