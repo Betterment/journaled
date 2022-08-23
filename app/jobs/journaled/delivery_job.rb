@@ -12,26 +12,11 @@ module Journaled
       raise KinesisTemporaryFailure
     end
 
-    UNSPECIFIED = Object.new
-    private_constant :UNSPECIFIED
+    def perform(*events, **legacy_kwargs)
+      events << legacy_kwargs if legacy_kwargs.present?
+      @kinesis_records = events.map { |e| KinesisRecord.new(**e.delete_if { |_k, v| v.nil? }) }
 
-    def perform(serialized_event:, partition_key:, stream_name: UNSPECIFIED, app_name: UNSPECIFIED)
-      @serialized_event = serialized_event
-      @partition_key = partition_key
-      if app_name != UNSPECIFIED
-        @stream_name = self.class.legacy_computed_stream_name(app_name: app_name)
-      elsif stream_name != UNSPECIFIED && !stream_name.nil?
-        @stream_name = stream_name
-      else
-        raise(ArgumentError, 'missing keyword: stream_name')
-      end
-
-      journal!
-    end
-
-    def self.legacy_computed_stream_name(app_name:)
-      env_var_name = [app_name&.upcase, 'JOURNALED_STREAM_NAME'].compact.join('_')
-      ENV.fetch(env_var_name)
+      journal! if Journaled.enabled?
     end
 
     def kinesis_client_config
@@ -46,18 +31,22 @@ module Journaled
 
     private
 
-    attr_reader :serialized_event, :partition_key, :stream_name
+    KinesisRecord = Struct.new(:serialized_event, :partition_key, :stream_name, keyword_init: true) do
+      def initialize(serialized_event:, partition_key:, stream_name:)
+        super(serialized_event: serialized_event, partition_key: partition_key, stream_name: stream_name)
+      end
 
-    def journal!
-      kinesis_client.put_record record if Journaled.enabled?
+      def to_h
+        { stream_name: stream_name, data: serialized_event, partition_key: partition_key }
+      end
     end
 
-    def record
-      {
-        stream_name: stream_name,
-        data: serialized_event,
-        partition_key: partition_key,
-      }
+    attr_reader :kinesis_records
+
+    def journal!
+      kinesis_records.map do |record|
+        kinesis_client.put_record(**record.to_h)
+      end
     end
 
     def kinesis_client

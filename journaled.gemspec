@@ -16,9 +16,10 @@ Gem::Specification.new do |s|
   s.metadata['rubygems_mfa_required'] = 'true'
 
   s.files = Dir["{app,config,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
-  s.test_files = Dir["spec/**/*"]
 
   s.required_ruby_version = ">= 2.6"
+
+  s.post_install_message = File.read("UPGRADING") if File.exist?('UPGRADING')
 
   s.add_dependency "activejob"
   s.add_dependency "activerecord"

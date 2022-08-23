@@ -11,6 +11,8 @@ Rails.configuration.database_configuration[rails_env].tap do |c|
   load File.expand_path('dummy/db/schema.rb', __dir__)
 end
 
+RSpec::Matchers.define_negated_matcher :not_change, :change
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true

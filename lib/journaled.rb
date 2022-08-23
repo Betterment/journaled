@@ -4,6 +4,8 @@ require "json-schema"
 
 require "journaled/engine"
 require "journaled/current"
+require "journaled/errors"
+require 'journaled/connection'
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
@@ -14,32 +16,36 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
+  mattr_accessor(:transactional_batching_enabled) { true }
 
-  def development_or_test?
+  def self.development_or_test?
     %w(development test).include?(Rails.env)
   end
 
-  def enabled?
+  def self.enabled?
     ['0', 'false', false, 'f', ''].exclude?(ENV.fetch('JOURNALED_ENABLED', !development_or_test?))
   end
 
-  def schema_providers
+  def self.schema_providers
     @schema_providers ||= [Journaled::Engine, Rails]
   end
 
-  def commit_hash
+  def self.commit_hash
     ENV.fetch('GIT_COMMIT')
   end
 
-  def actor_uri
+  def self.actor_uri
     Journaled::ActorUriProvider.instance.actor_uri
   end
 
-  def detect_queue_adapter!
-    adapter = job_base_class_name.constantize.queue_adapter_name
-    unless SUPPORTED_QUEUE_ADAPTERS.include?(adapter)
+  def self.queue_adapter
+    job_base_class_name.constantize.queue_adapter_name
+  end
+
+  def self.detect_queue_adapter!
+    unless SUPPORTED_QUEUE_ADAPTERS.include?(queue_adapter)
       raise <<~MSG
-        Journaled has detected an unsupported ActiveJob queue adapter: `:#{adapter}`
+        Journaled has detected an unsupported ActiveJob queue adapter: `:#{queue_adapter}`
 
         Journaled jobs must be enqueued transactionally to your primary database.
 
@@ -62,6 +68,4 @@ module Journaled
   def self.tag!(**tags)
     Current.tags = Current.tags.merge(tags)
   end
-
-  module_function :development_or_test?, :enabled?, :schema_providers, :commit_hash, :actor_uri, :detect_queue_adapter!
 end

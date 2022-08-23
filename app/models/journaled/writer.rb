@@ -26,8 +26,34 @@ class Journaled::Writer
 
   def journal!
     validate!
-    ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: journaled_event, priority: job_opts[:priority]) do
-      Journaled::DeliveryJob.set(job_opts).perform_later(**delivery_perform_args)
+
+    ActiveSupport::Notifications.instrument('journaled.event.stage', event: journaled_event, **journaled_enqueue_opts) do
+      if Journaled::Connection.available?
+        Journaled::Connection.stage!(journaled_event)
+      else
+        self.class.enqueue!(journaled_event)
+      end
+    end
+  end
+
+  def self.enqueue!(*events)
+    events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, batch|
+      job_opts = enqueue_opts.reverse_merge(priority: Journaled.job_priority)
+      ActiveSupport::Notifications.instrument('journaled.batch.enqueue', batch: batch, **job_opts) do
+        Journaled::DeliveryJob.set(job_opts).perform_later(*delivery_perform_args(batch))
+
+        batch.each { |event| ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: event, **job_opts) }
+      end
+    end
+  end
+
+  def self.delivery_perform_args(events)
+    events.map do |event|
+      {
+        serialized_event: event.journaled_attributes.to_json,
+        partition_key: event.journaled_partition_key,
+        stream_name: event.journaled_stream_name,
+      }
     end
   end
 
@@ -38,25 +64,11 @@ class Journaled::Writer
   delegate(*EVENT_METHOD_NAMES, to: :journaled_event)
 
   def validate!
+    serialized_event = journaled_event.journaled_attributes.to_json
+
     schema_validator('base_event').validate! serialized_event
     schema_validator('tagged_event').validate! serialized_event if journaled_event.tagged?
     schema_validator(journaled_schema_name).validate! serialized_event
-  end
-
-  def job_opts
-    journaled_enqueue_opts.reverse_merge(priority: Journaled.job_priority)
-  end
-
-  def delivery_perform_args
-    {
-      serialized_event: serialized_event,
-      partition_key: journaled_partition_key,
-      stream_name: journaled_stream_name,
-    }
-  end
-
-  def serialized_event
-    @serialized_event ||= journaled_attributes.to_json
   end
 
   def schema_validator(schema_name)

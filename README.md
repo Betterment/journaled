@@ -444,6 +444,24 @@ gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
 
+### Upgrading from 4.3.0
+
+Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0
+introduces a new transaction-aware feature that will bundle up all events
+emitted within a transaction and enqueue them all in a single "batch" job
+directly before the SQL `COMMIT` statement. This reduces the database impact of
+emitting a large volume of events at once.
+
+This feature can be disabled conditionally:
+
+```ruby
+Journaled.transactional_batching_enabled = false
+```
+
+Backwards compatibility has been included for background jobs enqueued by
+version 4.0 and above, but **has been dropped for jobs emitted by versions prior
+to 4.0**. (Again, be sure to upgrade only one major version at a time.)
+
 ### Upgrading from 3.1.0
 
 Versions of Journaled prior to 4.0 relied directly on environment variables for stream names, but now stream names are configured directly.
