@@ -266,6 +266,69 @@ RSpec.describe Journaled::Writer do
             .and journal_event_including(id: 'FAKE_UUID_3', event_type: 'fake_event_3')
         end
 
+        context 'when there is a nested transaction with events' do
+          it 'emits the events enqueued within the savepoint transaction within a separate batch' do
+            expect {
+              ActiveRecord::Base.transaction do
+                expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                expect {
+                  ActiveRecord::Base.transaction do
+                    expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                      .to not_change { enqueued_jobs.count }.from(0)
+                      .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+                  end
+                }.to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+                  .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              end
+            }.to change { enqueued_jobs.count }.from(0).to(1)
+              .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+          end
+
+          context 'and the inner transaction rolls back' do
+            it 'does not emit the events enqueued within the savepoint transaction' do
+              expect {
+                ActiveRecord::Base.transaction do
+                  expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                    .to not_change { enqueued_jobs.count }.from(0)
+                  ActiveRecord::Base.transaction do
+                    expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                      .to not_change { enqueued_jobs.count }.from(0)
+                    raise 'ohno'
+                  end
+                end
+              }.to raise_error('ohno')
+                .and not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            end
+          end
+
+          context 'and the outer transaction rolls back' do
+            it 'does not emit any events' do
+              expect {
+                ActiveRecord::Base.transaction do
+                  expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                    .to not_change { enqueued_jobs.count }.from(0)
+                  expect {
+                    ActiveRecord::Base.transaction do
+                      expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                        .to not_change { enqueued_jobs.count }.from(0)
+                    end
+                  }.to not_change { enqueued_jobs.count }.from(0)
+                  raise 'ohno'
+                end
+              }.to raise_error('ohno')
+                .and not_change { enqueued_jobs.count }.from(0)
+                .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+            end
+          end
+        end
+
         context 'when there is a savepoint transaction with events' do
           it 'emits the events enqueued within the savepoint transaction within a separate batch' do
             expect {
@@ -283,7 +346,7 @@ RSpec.describe Journaled::Writer do
                   .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
                   .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
               end
-            }.to change { enqueued_jobs.count }.from(0).to(2)
+            }.to change { enqueued_jobs.count }.from(0).to(1)
               .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
               .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
           end
@@ -384,7 +447,7 @@ RSpec.describe Journaled::Writer do
                   .to not_change { enqueued_jobs.count }.from(0)
                   .and not_journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
               end
-            }.to change { enqueued_jobs.count }.from(0).to(2)
+            }.to change { enqueued_jobs.count }.from(0).to(1)
               .and journal_event_including(id: 'FAKE_UUID_7', event_type: 'fake_event_7')
               .and journal_event_including(id: 'FAKE_UUID_9', event_type: 'fake_event_9')
           end
