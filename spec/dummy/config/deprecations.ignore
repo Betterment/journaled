@@ -1,0 +1,7 @@
+{
+  "ignored_warnings": [
+    "DEPRECATION WARNING: Using legacy connection handling is deprecated. Please set\n`legacy_connection_handling` to `false` in your application.\n\nThe new connection handling does not support `connection_handlers`\ngetter and setter.\n\nRead more about how to migrate at: https://guides.rubyonrails.org/active_record_multiple_databases.html#migrate-to-the-new-connection-handling\n (called from zeitwerk_exclude! at ../../lib/journaled/audit_log.rb)"
+  ],
+  "updated": "2022-09-06 18:28:29 UTC",
+  "rails_version": "7.0.3.1"
+}

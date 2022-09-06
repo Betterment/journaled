@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "title": "audit_log_event",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "event_type",
+    "created_at",
+    "class_name",
+    "table_name",
+    "record_id",
+    "database_operation",
+    "changes",
+    "snapshot",
+    "actor",
+    "tags"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "event_type": { "type": "string" },
+    "created_at": { "type": "string" },
+    "class_name": { "type": "string" },
+    "table_name": { "type": "string" },
+    "record_id": { "type": ["string", "integer"] },
+    "database_operation": { "type": "string" },
+    "changes": { "type": "object", "additionalProperties": true },
+    "snapshot": { "type": ["object", "null"], "additionalProperties": true },
+    "actor": { "type": "string" },
+    "tags": { "type": "object", "additionalProperties": true }
+  }
+}
