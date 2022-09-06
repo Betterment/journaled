@@ -23,7 +23,11 @@ module Journaled
     class << self
       def exclude_classes!
         excluded_classes.each do |name|
-          Rails.autoloaders.zeitwerk_enabled? ? zeitwerk_exclude!(name) : classic_exclude!(name)
+          if Rails::VERSION::MAJOR >= 6 && Rails.autoloaders.zeitwerk_enabled?
+            zeitwerk_exclude!(name)
+          else
+            classic_exclude!(name)
+          end
         end
       end
 
@@ -175,7 +179,7 @@ module Journaled
 
     def _emit_audit_log!(database_operation)
       if audit_log_config.enabled?
-        event = Event.new(self, database_operation, _audit_log_changes)
+        event = Journaled::AuditLog::Event.new(self, database_operation, _audit_log_changes)
         ActiveSupport::Notifications.instrument('journaled.audit_log.journal', event: event) do
           event.journal!
         end

@@ -4,9 +4,6 @@ require 'active_support/testing/time_helpers'
 
 require File.expand_path('dummy/config/environment.rb', __dir__)
 
-Rails.application.config.active_record.sqlite3.represent_boolean_as_integer = true if Rails::VERSION::MAJOR < 6
-Rails.application.config.active_record.legacy_connection_handling = false if Rails::VERSION::MAJOR == 7
-
 Rails.configuration.database_configuration[rails_env].tap do |c|
   ActiveRecord::Tasks::DatabaseTasks.create(c)
   ActiveRecord::Base.establish_connection(c)
