@@ -50,13 +50,11 @@ module Journaled
       private
 
       def zeitwerk_exclude!(name)
-        if defined?(name.constantize)
+        if Object.const_defined?(name)
           name.constantize.skip_audit_log
         else
           Rails.autoloaders.main.on_load(name) { |klass, _path| klass.skip_audit_log }
         end
-      rescue NameError
-        raise unless DEFAULT_EXCLUDED_CLASSES.include?(name)
       end
 
       def classic_exclude!(name)
