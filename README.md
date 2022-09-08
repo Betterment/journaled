@@ -122,6 +122,9 @@ Both model-level directives accept additional options to be passed into ActiveJo
 # For change journaling:
 journal_changes_to :email, as: :identity_change, enqueue_with: { priority: 10 }
 
+# For audit logging:
+has_audit_log enqueue_with: { priority: 30 }
+
 # Or for custom journaling:
 journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
 ```
