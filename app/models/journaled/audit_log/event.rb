@@ -1,6 +1,6 @@
 # FIXME: This cannot be included in lib/ because Journaled::Event is autoloaded via app/models
 #        Autoloading Journaled::Event isn't strictly necessary, and for compatibility it would
-#        make sense to move it to lib/ upstream in the `journaled` gem.
+#        make sense to move it to lib/.
 module Journaled
   module AuditLog
     Event = Struct.new(:record, :database_operation, :unfiltered_changes) do
