@@ -13,10 +13,6 @@ module Journaled
         AuditLog.default_stream_name || super
       end
 
-      def journaled_enqueue_opts
-        { job_owner: 'retail_platform' }
-      end
-
       def created_at
         case database_operation
           when 'insert'
