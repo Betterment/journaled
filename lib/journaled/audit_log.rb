@@ -119,9 +119,9 @@ module Journaled
         end
       end
 
-      def update_columns(**kwargs)
-        _journaled_audit_log_check!(:update_columns, **kwargs) do
-          super(**kwargs.except(:_force))
+      def update_columns(args = {}, **kwargs)
+        _journaled_audit_log_check!(:update_columns, **args.merge(kwargs)) do
+          super(args.merge(kwargs).except(:_force))
         end
       end
 
