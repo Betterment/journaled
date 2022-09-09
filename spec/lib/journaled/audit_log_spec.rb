@@ -296,7 +296,7 @@ RSpec.describe Journaled::AuditLog do
         end
 
         it 'does not emit a journaled event' do
-          expect(subject.class.audit_log_config).not_to be_enabled
+          expect(subject.audit_log_config).not_to be_enabled
           expect { subject.save }
             .to not_journal_event_including(event_type: 'journaled_audit_log_event')
           expect { subject.update(name: 'robert') }
