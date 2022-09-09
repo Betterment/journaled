@@ -162,7 +162,7 @@ RSpec.describe Journaled::AuditLog do
         MySubclass.has_audit_log ignore: :bar, enqueue_with: { priority: 30 }
         expect(MySubclass.audit_log_config.enabled?).to be(true)
         expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo))
-        expect(subject.audit_log_config.enqueue_opts).to eq({ priority: 10 })
+        expect(subject.audit_log_config.enqueue_opts).to eq(priority: 10)
         expect(MySubclass.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo bar))
         expect(MySubclass.audit_log_config.enqueue_opts).to eq(priority: 30)
       end
