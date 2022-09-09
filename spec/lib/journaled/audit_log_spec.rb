@@ -58,12 +58,11 @@ RSpec.describe Journaled::AuditLog do
 
   describe '.default_stream_name' do
     it 'defaults to primary default, but is configurable' do
-      # TODO: When upstreaming, check that it is set to Journaled.default_stream_name by default
-      default_was = described_class.default_stream_name
+      expect(described_class.default_stream_name).to be_nil
       described_class.default_stream_name = 'dont_cross_the_streams'
       expect(described_class.default_stream_name).to eq 'dont_cross_the_streams'
     ensure
-      described_class.default_stream_name = default_was
+      described_class.default_stream_name = nil
     end
   end
 
