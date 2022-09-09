@@ -69,3 +69,5 @@ module Journaled
     Current.tags = Current.tags.merge(tags)
   end
 end
+
+require 'journaled/audit_log'
