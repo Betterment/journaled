@@ -3,7 +3,7 @@
 #        make sense to move it to lib/.
 module Journaled
   module AuditLog
-    Event = Struct.new(:record, :database_operation, :unfiltered_changes) do
+    Event = Struct.new(:record, :database_operation, :unfiltered_changes, :enqueue_opts) do
       include Journaled::Event
 
       journal_attributes :class_name, :table_name, :record_id,
@@ -11,6 +11,10 @@ module Journaled
 
       def journaled_stream_name
         AuditLog.default_stream_name || super
+      end
+
+      def journaled_enqueue_opts
+        record.class.audit_log_config.enqueue_opts
       end
 
       def created_at

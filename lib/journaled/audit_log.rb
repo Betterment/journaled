@@ -15,6 +15,7 @@ module Journaled
 
     mattr_accessor(:default_ignored_columns) { %i(created_at updated_at) }
     mattr_accessor(:default_stream_name) { Journaled.default_stream_name }
+    mattr_accessor(:default_enqueue_opts) { {} }
     mattr_accessor(:excluded_classes) { DEFAULT_EXCLUDED_CLASSES.dup }
     thread_mattr_accessor(:snapshots_enabled) { false }
     thread_mattr_accessor(:_disabled) { false }
@@ -64,18 +65,37 @@ module Journaled
       end
     end
 
-    Config = Struct.new(:enabled, :ignored_columns) do
-      private :enabled
+    Config = Struct.new(:enabled, :ignored_columns, :enqueue_opts) do
+      def self.default
+        new(false, AuditLog.default_ignored_columns.dup, AuditLog.default_enqueue_opts.dup)
+      end
+
+      def initialize(*)
+        super
+        self.ignored_columns ||= []
+        self.enqueue_opts ||= {}
+      end
+
       def enabled?
         !AuditLog._disabled && self[:enabled].present?
       end
+
+      def dup
+        super.tap do |config|
+          config.ignored_columns = ignored_columns.dup
+          config.enqueue_opts = enqueue_opts.dup
+        end
+      end
+
+      private :enabled
     end
 
     included do
       prepend BlockedMethods
       singleton_class.prepend BlockedClassMethods
 
-      class_attribute :audit_log_config, default: Config.new(false, AuditLog.default_ignored_columns)
+      class_attribute :audit_log_config, default: Config.default
+
       attr_accessor :_log_snapshot
 
       after_create { _emit_audit_log!('insert') }
@@ -84,19 +104,16 @@ module Journaled
     end
 
     class_methods do
-      def has_audit_log(ignore: [])
-        ignored_columns = _audit_log_inherited_ignored_columns + [ignore].flatten(1)
-        self.audit_log_config = Config.new(true, ignored_columns.uniq)
+      def has_audit_log(ignore: [], enqueue_with: {})
+        self.audit_log_config = audit_log_config.dup
+        audit_log_config.enabled = true
+        audit_log_config.ignored_columns |= [ignore].flatten(1)
+        audit_log_config.enqueue_opts.merge!(enqueue_with)
       end
 
       def skip_audit_log
-        self.audit_log_config = Config.new(false, _audit_log_inherited_ignored_columns.uniq)
-      end
-
-      private
-
-      def _audit_log_inherited_ignored_columns
-        (superclass.try(:audit_log_config)&.ignored_columns || []) + audit_log_config.ignored_columns
+        self.audit_log_config = audit_log_config.dup
+        audit_log_config.enabled = false
       end
     end
 
@@ -177,7 +194,7 @@ module Journaled
 
     def _emit_audit_log!(database_operation)
       if audit_log_config.enabled?
-        event = Journaled::AuditLog::Event.new(self, database_operation, _audit_log_changes)
+        event = Journaled::AuditLog::Event.new(self, database_operation, _audit_log_changes, audit_log_config.enqueue_opts)
         ActiveSupport::Notifications.instrument('journaled.audit_log.journal', event: event) do
           event.journal!
         end

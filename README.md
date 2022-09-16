@@ -122,11 +122,32 @@ Both model-level directives accept additional options to be passed into ActiveJo
 # For change journaling:
 journal_changes_to :email, as: :identity_change, enqueue_with: { priority: 10 }
 
+# For audit logging:
+has_audit_log enqueue_with: { priority: 30 }
+
 # Or for custom journaling:
 journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
 ```
 
-### Change Journaling
+### Attribution
+
+Before using `Journaled::Changes` or `Journaled::AuditLog`, you will want to
+set up automatic "actor" attribution (i.e. tracking the current user session).
+To enable this feature, add the following to your controller base class for
+attribution:
+
+```ruby
+class ApplicationController < ActionController::Base
+  include Journaled::Actor
+
+  self.journaled_actor = :current_user # Or your authenticated entity
+end
+```
+
+Your authenticated entity must respond to `#to_global_id`, which ActiveRecords do by default.
+This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
+
+### Change Journaling with `Journaled::Changes`
 
 Out of the box, `Journaled` provides an event type and ActiveRecord
 mix-in for durably journaling changes to your model, implemented via
@@ -139,19 +160,6 @@ class User < ApplicationRecord
   journal_changes_to :email, :first_name, :last_name, as: :identity_change
 end
 ```
-
-Add the following to your controller base class for attribution:
-
-```ruby
-class ApplicationController < ActionController::Base
-  include Journaled::Actor
-
-  self.journaled_actor = :current_user # Or your authenticated entity
-end
-```
-
-Your authenticated entity must respond to `#to_global_id`, which ActiveRecords do by default.
-This feature relies on `ActiveSupport::CurrentAttributes` under the hood.
 
 Every time any of the specified attributes is modified, or a `User`
 record is created or destroyed, an event will be sent to Kinesis with the following attributes:
@@ -178,6 +186,213 @@ additional `force: true` argument if they would interfere with change
 journaling. Note that the less-frequently-used methods `toggle`,
 `increment*`, `decrement*`, and `update_counters` are not intercepted at
 this time.
+
+
+### Audit Logging with `Journaled::AuditLog`
+
+Journaled includes a feature for producing audit logs of changes to your model.
+Unlike `Journaled::Changes`, which will emit individual sets of changes as
+"logical" events, `Journaled::AuditLog` will log all changes in their entirety,
+unless otherwise told to ignore changes to specific columns.
+
+This behavior is similar to
+[papertrail](https://github.com/paper-trail-gem/paper_trail),
+[audited](https://github.com/collectiveidea/audited), and
+[logidze](https://github.com/palkan/logidze), except instead of storing
+changes/versions locally (in your application's database), it emits them to
+Kinesis (as Journaled events).
+
+#### Audit Log Configuration
+
+To enable audit logging for a given record, use the `has_audit_log` directive:
+
+```ruby
+class MyModel < ApplicationRecord
+  has_audit_log
+
+  # This class will now be audited,
+  # but will ignore changes to `created_at` and `updated_at`.
+end
+```
+
+To ignore changes to additional columns, use the `ignore` option:
+
+```ruby
+class MyModel < ApplicationRecord
+  has_audit_log ignore: :last_synced_at
+
+  # This class will be audited,
+  # and will ignore changes to `created_at`, `updated_at`, and `last_synced_at`.
+end
+```
+
+By default, changes to `updated_at` and `created_at` will be ignored (since
+these generally change on every update), but this behavior can be reconfigured:
+
+```ruby
+# change the defaults:
+Journaled::AuditLog.default_ignored_columns = %i(createdAt updatedAt)
+
+# or append new defaults:
+Journaled::AuditLog.default_ignored_columns += %i(modified_at)
+
+# or disable defaults entirely:
+Journaled::AuditLog.default_ignored_columns = []
+```
+
+Subclasses will inherit audit log configs:
+
+```ruby
+class MyModel < ApplicationRecord
+  has_audit_log ignore: :last_synced_at
+end
+
+class MySubclass < MyModel
+  # this class will be audited,
+  # and will ignore `created_at`, `updated_at`, and `last_synced_at`.
+end
+```
+
+To disable audit logs on subclasses, use `skip_audit_log`:
+
+```ruby
+class MySubclass < MyModel
+  skip_audit_log
+end
+```
+
+Subclasses may specify additional columns to ignore (which will be merged into
+the inherited list):
+
+```ruby
+class MySubclass < MyModel
+  has_audit_log ignore: :another_field
+
+  # this class will ignore `another_field`, IN ADDITION TO `created_at`, `updated_at`,
+  # and any other fields specified by the parent class.
+end
+```
+
+To temporarily disable audit logging globally, use the `without_audit_logging` directive:
+
+```ruby
+Journaled::AuditLog.without_audit_logging do
+  # Any operation in here will skip audit logging
+end
+```
+
+#### Audit Log Events
+
+Whenever an audited record is created, updated, or destroyed, a
+`journaled_audit_log` event is emitted. For example, calling
+`user.update!(name: 'Bart')` would result in an event that looks something like
+this:
+
+```json
+{
+  "id": "bc7cb6a6-88cf-4849-a4f0-a31b0b199c47",
+  "event_type": "journaled_audit_log",
+  "created_at": "2022-01-28T11:06:54.928-05:00",
+  "class_name": "User",
+  "table_name": "users",
+  "record_id": "123",
+  "database_operation": "update",
+  "changes": { "name": ["Homer", "Bart"] },
+  "snapshot": null,
+  "actor": "gid://app_name/AdminUser/456",
+  "tags": {}
+}
+```
+
+The field breakdown is as follows:
+
+- `id`: a randomly-generated ID for the event itself
+- `event_type`: the type of event (always `journaled_audit_log`)
+- `created_at`: the time that the action occurred (should match `updated_at` on
+  the ActiveRecord)
+- `class_name`: the name of the ActiveRecord class
+- `table_name`: the underlying table that the class interfaces with
+- `record_id`: the primary key of the ActiveRecord
+- `database_operation`: the type of operation (`insert`, `update`, or `delete`)
+- `changes`: the changes to the record, in the form of `"field_name":
+  ["from_value", "to_value"]`
+- `snapshot`: an (optional) snapshot of all of the record's columns and their
+  values (see below).
+- `actor`: the current `Journaled.actor`
+- `tags`: the current `Journaled.tags`
+
+#### Snapshots
+
+When records are created, updated, and deleted, the `changes` field is populated
+with only the columns that changed. While this keeps event payload size down, it
+may make it harder to reconstruct the state of the record at a given point in
+time.
+
+This is where the `snapshot` field comes in! To produce a full snapshot of a
+record as part of an update, set use the virtual `_log_snapshot` attribute, like
+so:
+
+```ruby
+my_user.update!(name: 'Bart', _log_snapshot: true)
+```
+
+Or to produce snapshots for all records that change for a given operation,
+wrap it a `with_snapshots` block, like so:
+
+```ruby
+Journaled::AuditLog.with_snapshots do
+  ComplicatedOperation.run!
+end
+```
+
+Events with snapshots will continue to populate the `changes` field, but will
+additionally contain a snapshot with the full state of the user:
+
+```json
+{
+  "...": "...",
+  "changes": { "name": ["Homer", "Bart"] },
+  "snapshot": { "name": "Bart", "email": "simpson@example.com", "favorite_food": "pizza" },
+  "...": "..."
+}
+```
+
+#### Handling Sensitive Data
+
+Both `changes` and `snapshot` will filter out sensitive fields, as defined by
+your `Rails.application.config.filter_parameters` list:
+
+```json
+{
+  "...": "...",
+  "changes": { "ssn": ["[FILTERED]", "[FILTERED]"] },
+  "snapshot": { "ssn": "[FILTERED]" },
+  "...": "..."
+}
+```
+
+They will also filter out any fields whose name ends in `_crypt` or `_hmac`, as
+well as fields that rely on Active Record Encryption / `encrypts` ([introduced
+in Rails 7](https://edgeguides.rubyonrails.org/active_record_encryption.html)).
+
+This is done to avoid emitting values to locations where it is difficult or
+impossible to rotate encryption keys (or otherwise scrub values after the
+fact), and currently there is no built-in configuration to bypass this
+behavior. If you need to track changes to sensitive/encrypted fields, it is
+recommended that you store the values in a local history table (still
+encrypted, of course!).
+
+#### Caveats
+
+Because Journaled events are not guaranteed to arrive in order, events emitted
+by `Journaled::AuditLog` must be sorted by their `created_at` value, which
+should correspond roughly to the time that the SQL statement was issued.
+**There is currently no other means of globally ordering audit log events**,
+making them susceptible to clock drift and race conditions.
+
+These issues may be mitigated on a per-model basis via
+`ActiveRecord::Locking::Optimistic` (and its auto-incrementing `lock_version`
+column), and/or by careful use of other locking mechanisms.
 
 ### Custom Journaling
 
@@ -338,7 +553,7 @@ Returns one of the following in order of preference:
 * a string of the form `gid://[app_name]` as a fallback
 
 In order for this to be most useful, you must configure your controller
-as described in [Change Journaling](#change-journaling) above.
+as described in [Attribution](#attribution) above.
 
 ### Testing
 

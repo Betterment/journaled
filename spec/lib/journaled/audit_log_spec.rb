@@ -66,6 +66,16 @@ RSpec.describe Journaled::AuditLog do
     end
   end
 
+  describe '.default_enqueue_opts' do
+    it 'defaults to timestamps, but is configurable' do
+      expect(described_class.default_enqueue_opts).to eq({})
+      described_class.default_enqueue_opts = { priority: 99 }
+      expect(described_class.default_enqueue_opts).to eq(priority: 99)
+    ensure
+      described_class.default_enqueue_opts = {}
+    end
+  end
+
   describe '.excluded_classes' do
     let(:defaults) do
       %w(
@@ -100,15 +110,19 @@ RSpec.describe Journaled::AuditLog do
     it 'enables/disables audit logging' do
       expect(subject.audit_log_config.enabled?).to be(false)
       expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS))
+      expect(subject.audit_log_config.enqueue_opts).to eq({})
       subject.has_audit_log
       expect(subject.audit_log_config.enabled?).to be(true)
       expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS))
-      subject.has_audit_log ignore: %i(foo bar baz)
+      expect(subject.audit_log_config.enqueue_opts).to eq({})
+      subject.has_audit_log ignore: %i(foo bar baz), enqueue_with: { priority: 30 }
       expect(subject.audit_log_config.enabled?).to be(true)
       expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo bar baz))
+      expect(subject.audit_log_config.enqueue_opts).to eq(priority: 30)
       subject.skip_audit_log
       expect(subject.audit_log_config.enabled?).to be(false)
       expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo bar baz))
+      expect(subject.audit_log_config.enqueue_opts).to eq(priority: 30)
     end
 
     it 'can be composed with multiple calls' do
@@ -140,13 +154,17 @@ RSpec.describe Journaled::AuditLog do
       it 'inherits the config by default, and merges ignored columns' do
         expect(MySubclass.audit_log_config.enabled?).to be(false)
         expect(MySubclass.audit_log_config.ignored_columns).to eq(%i(DEFAULTS))
-        subject.has_audit_log ignore: %i(foo)
+        expect(MySubclass.audit_log_config.enqueue_opts).to eq({})
+        subject.has_audit_log ignore: %i(foo), enqueue_with: { priority: 10 }
         expect(MySubclass.audit_log_config.enabled?).to be(true)
         expect(MySubclass.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo))
-        MySubclass.has_audit_log ignore: :bar
+        expect(MySubclass.audit_log_config.enqueue_opts).to eq(priority: 10)
+        MySubclass.has_audit_log ignore: :bar, enqueue_with: { priority: 30 }
         expect(MySubclass.audit_log_config.enabled?).to be(true)
         expect(subject.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo))
+        expect(subject.audit_log_config.enqueue_opts).to eq(priority: 10)
         expect(MySubclass.audit_log_config.ignored_columns).to eq(%i(DEFAULTS foo bar))
+        expect(MySubclass.audit_log_config.enqueue_opts).to eq(priority: 30)
       end
 
       it 'allows the subclass to skip audit logging, and vice versa' do
