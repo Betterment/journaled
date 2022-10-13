@@ -18,6 +18,7 @@ module Journaled
     mattr_accessor(:default_enqueue_opts) { {} }
     mattr_accessor(:excluded_classes) { DEFAULT_EXCLUDED_CLASSES.dup }
     thread_mattr_accessor(:snapshots_enabled) { false }
+    thread_mattr_accessor(:snapshot_on_deletion) { false }
     thread_mattr_accessor(:_disabled) { false }
     thread_mattr_accessor(:_force) { false }
 

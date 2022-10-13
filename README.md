@@ -345,6 +345,15 @@ Journaled::AuditLog.with_snapshots do
 end
 ```
 
+Snapshots can also be enabled globally for all _deletion_ operations. Since
+`changes` will be empty on deletion, you should consider using this if you care
+about the contents of any records being deleted (and/or don't have a full audit
+trail from their time of creation):
+
+```ruby
+Journaled::AuditLog.snapshot_on_deletion = true
+```
+
 Events with snapshots will continue to populate the `changes` field, but will
 additionally contain a snapshot with the full state of the user:
 
