@@ -389,6 +389,23 @@ RSpec.describe Journaled::AuditLog do
           end
         end
       end
+
+      context 'and snapshotting is enabled only on deletion' do
+        subject { MyModel.new(name: 'bob') }
+
+        before do
+          described_class.snapshot_on_deletion = true
+        end
+
+        it 'emits snapshots through the lifecycle of the object, and filters the expected fields' do
+          expect { subject.save }
+            .to not_journal_event_including(snapshot: { all: 'attributes', password: '[FILTERED]' })
+          expect { subject.update(name: 'robert') }
+            .to not_journal_event_including(snapshot: { all: 'attributes', password: '[FILTERED]' })
+          expect { subject.destroy }
+            .to journal_event_including(snapshot: { all: 'attributes', password: '[FILTERED]' })
+        end
+      end
     end
 
     context 'and a field is ignored' do

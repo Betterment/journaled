@@ -58,7 +58,8 @@ module Journaled
       end
 
       def snapshot
-        filtered_attributes if record._log_snapshot || AuditLog.snapshots_enabled
+        filtered_attributes if record._log_snapshot || AuditLog.snapshots_enabled ||
+          (database_operation == 'delete' && AuditLog.snapshot_on_deletion)
       end
 
       def actor
