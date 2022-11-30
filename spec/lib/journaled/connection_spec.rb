@@ -41,17 +41,17 @@ RSpec.describe Journaled::Connection do
             expect { described_class.stage!(event) }.to raise_error(Journaled::TransactionSafetyError)
           end
         end
-      end
 
-      context 'but thread-local batching is enabled' do
-        around do |example|
-          Journaled.with_transactional_batching { example.run }
-        end
+        context 'but thread-local batching is enabled' do
+          around do |example|
+            Journaled.with_transactional_batching { example.run }
+          end
 
-        it 'returns true, and allows for staging events' do
-          ActiveRecord::Base.transaction do
-            expect(described_class.available?).to be true
-            expect { described_class.stage!(event) }.not_to raise_error
+          it 'returns true, and allows for staging events' do
+            ActiveRecord::Base.transaction do
+              expect(described_class.available?).to be true
+              expect { described_class.stage!(event) }.not_to raise_error
+            end
           end
         end
       end

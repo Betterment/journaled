@@ -393,7 +393,7 @@ RSpec.describe Journaled::Writer do
         end
       end
 
-      context 'when transactional batching is disabled' do
+      context 'when transactional batching is disabled globally' do
         around do |example|
           Journaled.transactional_batching_enabled = false
           example.run
@@ -414,6 +414,27 @@ RSpec.describe Journaled::Writer do
           }.to change { enqueued_jobs.count }.from(0).to(2)
             .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
             .and journal_event_including(id: 'FAKE_UUID_5', event_type: 'fake_event_5')
+        end
+
+        context 'but thread-local transactional batching is enabled' do
+          around do |example|
+            Journaled.with_transactional_batching { example.run }
+          end
+
+          it 'batches multiple events and does not enqueue until the end of a transaction' do
+            expect {
+              ActiveRecord::Base.transaction do
+                expect { described_class.new(journaled_event: fake_event(1)).journal! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+                expect { described_class.new(journaled_event: fake_event(2)).journal! }
+                  .to not_change { enqueued_jobs.count }.from(0)
+                  .and not_journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+              end
+            }.to change { enqueued_jobs.count }.from(0).to(1)
+              .and journal_event_including(id: 'FAKE_UUID_1', event_type: 'fake_event_1')
+              .and journal_event_including(id: 'FAKE_UUID_2', event_type: 'fake_event_2')
+          end
         end
       end
 

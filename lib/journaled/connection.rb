@@ -2,7 +2,7 @@ module Journaled
   module Connection
     class << self
       def available?
-        Journaled.transactional_batching_enabled && transaction_open?
+        Journaled.transactional_batching_enabled? && transaction_open?
       end
 
       def stage!(event)
