@@ -682,6 +682,14 @@ This feature can be disabled conditionally:
 Journaled.transactional_batching_enabled = false
 ```
 
+And can then be enabled via the following block:
+
+```ruby
+Journaled.with_transactional_batching do
+  # your code
+end
+```
+
 Backwards compatibility has been included for background jobs enqueued by
 version 4.0 and above, but **has been dropped for jobs emitted by versions prior
 to 4.0**. (Again, be sure to upgrade only one major version at a time.)

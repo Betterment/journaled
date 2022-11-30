@@ -18,6 +18,18 @@ module Journaled
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
   mattr_accessor(:transactional_batching_enabled) { true }
 
+  def transactional_batching_enabled?
+    super || Thread.current[:journaled_transactional_batching_enabled]
+  end
+
+  def self.with_transactional_batching
+    value_was = Thread.current[:journaled_transactional_batching_enabled]
+    Thread.current[:journaled_transactional_batching_enabled] = true
+    yield
+  ensure
+    Thread.current[:journaled_transactional_batching_enabled] = value_was
+  end
+
   def self.development_or_test?
     %w(development test).include?(Rails.env)
   end

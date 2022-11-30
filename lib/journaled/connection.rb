@@ -6,7 +6,7 @@ module Journaled
       end
 
       def stage!(event)
-        raise TransactionSafetyError, <<~MSG unless transaction_open?
+        raise TransactionSafetyError, <<~MSG unless available?
           Transaction not available! By default, journaled event batching requires an open database transaction.
         MSG
 

@@ -27,7 +27,7 @@ RSpec.describe Journaled::Connection do
         end
       end
 
-      context 'when transactional batching is disabled' do
+      context 'when transactional batching is disabled globally' do
         around do |example|
           Journaled.transactional_batching_enabled = false
           example.run
@@ -36,8 +36,23 @@ RSpec.describe Journaled::Connection do
         end
 
         it 'returns false, and raises an error when events are staged' do
-          expect(described_class.available?).to be false
-          expect { described_class.stage!(event) }.to raise_error(Journaled::TransactionSafetyError)
+          ActiveRecord::Base.transaction do
+            expect(described_class.available?).to be false
+            expect { described_class.stage!(event) }.to raise_error(Journaled::TransactionSafetyError)
+          end
+        end
+      end
+
+      context 'but thread-local batching is enabled' do
+        around do |example|
+          Journaled.with_transactional_batching { example.run }
+        end
+
+        it 'returns true, and allows for staging events' do
+          ActiveRecord::Base.transaction do
+            expect(described_class.available?).to be true
+            expect { described_class.stage!(event) }.not_to raise_error
+          end
         end
       end
     end

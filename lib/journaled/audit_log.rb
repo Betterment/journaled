@@ -83,7 +83,7 @@ module Journaled
 
       def dup
         super.tap do |config|
-          config.ignored_columns = ignored_columns.dup
+          config.ignored_columns = ignored_columns.dup # rubocop:disable Rails/IgnoredColumnsAssignment
           config.enqueue_opts = enqueue_opts.dup
         end
       end
