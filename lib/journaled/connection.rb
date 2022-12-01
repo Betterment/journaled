@@ -2,11 +2,11 @@ module Journaled
   module Connection
     class << self
       def available?
-        Journaled.transactional_batching_enabled && transaction_open?
+        Journaled.transactional_batching_enabled? && transaction_open?
       end
 
       def stage!(event)
-        raise TransactionSafetyError, <<~MSG unless transaction_open?
+        raise TransactionSafetyError, <<~MSG unless available?
           Transaction not available! By default, journaled event batching requires an open database transaction.
         MSG
 

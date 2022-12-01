@@ -16,7 +16,19 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
-  mattr_accessor(:transactional_batching_enabled) { true }
+  mattr_writer(:transactional_batching_enabled) { true }
+
+  def self.transactional_batching_enabled?
+    Thread.current[:journaled_transactional_batching_enabled] || @@transactional_batching_enabled
+  end
+
+  def self.with_transactional_batching
+    value_was = Thread.current[:journaled_transactional_batching_enabled]
+    Thread.current[:journaled_transactional_batching_enabled] = true
+    yield
+  ensure
+    Thread.current[:journaled_transactional_batching_enabled] = value_was
+  end
 
   def self.development_or_test?
     %w(development test).include?(Rails.env)
