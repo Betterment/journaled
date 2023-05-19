@@ -37,12 +37,14 @@ class Journaled::Writer
   end
 
   def self.enqueue!(*events)
-    events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, batch|
-      job_opts = enqueue_opts.reverse_merge(priority: Journaled.job_priority)
-      ActiveSupport::Notifications.instrument('journaled.batch.enqueue', batch: batch, **job_opts) do
-        Journaled::DeliveryJob.set(job_opts).perform_later(*delivery_perform_args(batch))
+    if Journaled.enabled?
+      events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, batch|
+        job_opts = enqueue_opts.reverse_merge(priority: Journaled.job_priority)
+        ActiveSupport::Notifications.instrument('journaled.batch.enqueue', batch: batch, **job_opts) do
+          Journaled::DeliveryJob.set(job_opts).perform_later(*delivery_perform_args(batch))
 
-        batch.each { |event| ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: event, **job_opts) }
+          batch.each { |event| ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: event, **job_opts) }
+        end
       end
     end
   end
