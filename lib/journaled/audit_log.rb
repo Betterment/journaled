@@ -52,11 +52,8 @@ module Journaled
       private
 
       def zeitwerk_exclude!(name)
-        if Object.const_defined?(name)
-          name.constantize.skip_audit_log
-        else
-          Rails.autoloaders.main.on_load(name) { |klass, _path| klass.skip_audit_log }
-        end
+        name.constantize.skip_audit_log if Object.const_defined?(name)
+        Rails.autoloaders.main.on_load(name) { |klass, _path| klass.skip_audit_log }
       end
 
       def classic_exclude!(name)
