@@ -83,7 +83,7 @@ module Journaled
 
       def filtered_attributes
         attrs = record.attributes.dup.symbolize_keys
-        attrs.each do |key, _value|
+        attrs.each_key do |key|
           attrs[key] = '[FILTERED]' if filter_key?(key)
         end
       end
