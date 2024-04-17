@@ -54,7 +54,7 @@ module Journaled
       private
 
       def zeitwerk_exclude!(name)
-        name.constantize.skip_audit_log if Object.const_defined?(name)
+        name.constantize.skip_audit_log if Object.const_defined?(name) && !independent_class_in_7_1?(name)
         Rails.autoloaders.main.on_load(name) { |klass, _path| klass.skip_audit_log }
       end
 
@@ -62,6 +62,14 @@ module Journaled
         name.constantize.skip_audit_log
       rescue NameError
         nil
+      end
+
+      def independent_class_in_7_1?(name)
+        return false if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
+
+        # These classes do not inherit from ActiveRecord::Base in 7.1
+        # so calling `skip_audit_log` on them will raise.
+        %w(ActiveRecord::InternalMetadata ActiveRecord::SchemaMigration).include?(name)
       end
     end
 
