@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Journaled::RelationChangeProtection
   def update_all(updates, opts = { force: false }) # rubocop:disable Metrics/AbcSize
     unless opts[:force] || !@klass.respond_to?(:journaled_attribute_names) || @klass.journaled_attribute_names.empty?

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Journaled
   class Current < ActiveSupport::CurrentAttributes
     attribute :tags

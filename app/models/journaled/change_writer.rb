@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Journaled::ChangeWriter
   attr_reader :model, :change_definition
 

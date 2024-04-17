@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 module Journaled
   class DeliveryJob < ApplicationJob
-    DEFAULT_REGION = 'us-east-1'.freeze
+    DEFAULT_REGION = 'us-east-1'
 
     rescue_from(Aws::Kinesis::Errors::InternalFailure, Aws::Kinesis::Errors::ServiceUnavailable, Aws::Kinesis::Errors::Http503Error) do |e|
       Rails.logger.error "Kinesis Error - Server Error occurred - #{e.class}"
