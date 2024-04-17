@@ -14,6 +14,6 @@ module Dummy
   class Application < Rails::Application
     config.autoloader = Rails::VERSION::MAJOR >= 7 ? :zeitwerk : :classic
     config.active_record.sqlite3.represent_boolean_as_integer = true if Rails::VERSION::MAJOR < 6
-    config.active_record.legacy_connection_handling = false if Rails::VERSION::MAJOR >= 7
+    config.active_record.legacy_connection_handling = false if Gem::Version.new(Rails.version) == Gem::Version.new('7.0')
   end
 end
