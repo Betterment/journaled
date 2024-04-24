@@ -80,14 +80,23 @@ RSpec.describe Journaled::AuditLog do
 
   describe '.excluded_classes' do
     let(:defaults) do
-      %w(
-        Delayed::Job
-        PaperTrail::Version
-        ActiveStorage::Attachment
-        ActiveStorage::Blob
-        ActiveRecord::InternalMetadata
-        ActiveRecord::SchemaMigration
-      )
+      if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+          ActiveRecord::InternalMetadata
+          ActiveRecord::SchemaMigration
+        )
+      else
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+        )
+      end
     end
 
     it 'defaults to DJ and papertrail, but is configurable, and will disable audit logging' do
