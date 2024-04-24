@@ -6,14 +6,26 @@ module Journaled
   module AuditLog
     extend ActiveSupport::Concern
 
-    DEFAULT_EXCLUDED_CLASSES = %w(
-      Delayed::Job
-      PaperTrail::Version
-      ActiveStorage::Attachment
-      ActiveStorage::Blob
-      ActiveRecord::InternalMetadata
-      ActiveRecord::SchemaMigration
-    ).freeze
+    DEFAULT_EXCLUDED_CLASSES =
+      if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+          ActiveRecord::InternalMetadata
+          ActiveRecord::SchemaMigration
+        )
+      else
+        # ActiveRecord::InternalMetadata and SchemaMigration do not inherit from
+        # ActiveRecord::Base in Rails 7.1 so we do not need to exclude them.
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+        )
+      end.freeze
 
     mattr_accessor(:default_ignored_columns) { %i(created_at updated_at) }
     mattr_accessor(:default_stream_name) { Journaled.default_stream_name }
@@ -54,7 +66,7 @@ module Journaled
       private
 
       def zeitwerk_exclude!(name)
-        name.constantize.skip_audit_log if Object.const_defined?(name) && !independent_class_in_7_1?(name)
+        name.constantize.skip_audit_log if Object.const_defined?(name)
         Rails.autoloaders.main.on_load(name) { |klass, _path| klass.skip_audit_log }
       end
 
@@ -62,14 +74,6 @@ module Journaled
         name.constantize.skip_audit_log
       rescue NameError
         nil
-      end
-
-      def independent_class_in_7_1?(name)
-        return false if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
-
-        # These classes do not inherit from ActiveRecord::Base in 7.1
-        # so calling `skip_audit_log` on them will raise.
-        %w(ActiveRecord::InternalMetadata ActiveRecord::SchemaMigration).include?(name)
       end
     end
 
