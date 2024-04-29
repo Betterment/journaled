@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 rails_env = ENV['RAILS_ENV'] ||= 'test'
 require 'uncruft'
 require 'active_support/testing/time_helpers'

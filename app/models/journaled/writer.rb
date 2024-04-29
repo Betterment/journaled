@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Journaled::Writer
   EVENT_METHOD_NAMES = %i(
     journaled_schema_name

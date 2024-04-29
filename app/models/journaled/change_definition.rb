@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Journaled::ChangeDefinition
   attr_reader :attribute_names, :logical_operation
 

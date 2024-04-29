@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Journaled::JsonSchemaModel::Validator
   def initialize(schema_name)
     @schema_name = schema_name

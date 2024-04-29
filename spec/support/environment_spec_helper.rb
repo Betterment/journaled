@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module EnvironmentSpecHelper
   def with_env(opts = {})
     old = {}

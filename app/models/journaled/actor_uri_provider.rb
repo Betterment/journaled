@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Journaled::ActorUriProvider
   include Singleton
 

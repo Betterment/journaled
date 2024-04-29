@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Journaled::AuditLog do
@@ -78,14 +80,23 @@ RSpec.describe Journaled::AuditLog do
 
   describe '.excluded_classes' do
     let(:defaults) do
-      %w(
-        Delayed::Job
-        PaperTrail::Version
-        ActiveStorage::Attachment
-        ActiveStorage::Blob
-        ActiveRecord::InternalMetadata
-        ActiveRecord::SchemaMigration
-      )
+      if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+          ActiveRecord::InternalMetadata
+          ActiveRecord::SchemaMigration
+        )
+      else
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+        )
+      end
     end
 
     it 'defaults to DJ and papertrail, but is configurable, and will disable audit logging' do
@@ -209,9 +220,9 @@ RSpec.describe Journaled::AuditLog do
         define_attribute_methods(*attrs)
 
         attrs.each do |attr|
-          define_method("#{attr}=") do |val|
-            send("#{attr}_will_change!") unless val == send(attr)
-            instance_variable_set("@#{attr}", val)
+          define_method(:"#{attr}=") do |val|
+            send(:"#{attr}_will_change!") unless val == send(attr)
+            instance_variable_set(:"@#{attr}", val)
           end
         end
 
@@ -232,7 +243,7 @@ RSpec.describe Journaled::AuditLog do
         end
 
         def assign_attrs(**attrs)
-          attrs.each { |attr, value| send("#{attr}=", value) }
+          attrs.each { |attr, value| send(:"#{attr}=", value) }
         end
       end
     end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Journaled
   class Engine < ::Rails::Engine
     config.after_initialize do

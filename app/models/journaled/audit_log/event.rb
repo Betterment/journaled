@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # FIXME: This cannot be included in lib/ because Journaled::Event is autoloaded via app/models
 #        Autoloading Journaled::Event isn't strictly necessary, and for compatibility it would
 #        make sense to move it to lib/.
@@ -83,7 +85,7 @@ module Journaled
 
       def filtered_attributes
         attrs = record.attributes.dup.symbolize_keys
-        attrs.each do |key, _value|
+        attrs.each_key do |key|
           attrs[key] = '[FILTERED]' if filter_key?(key)
         end
       end

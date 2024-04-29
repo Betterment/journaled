@@ -1,17 +1,31 @@
+# frozen_string_literal: true
+
 require 'active_support/core_ext/module/attribute_accessors_per_thread'
 
 module Journaled
   module AuditLog
     extend ActiveSupport::Concern
 
-    DEFAULT_EXCLUDED_CLASSES = %w(
-      Delayed::Job
-      PaperTrail::Version
-      ActiveStorage::Attachment
-      ActiveStorage::Blob
-      ActiveRecord::InternalMetadata
-      ActiveRecord::SchemaMigration
-    ).freeze
+    DEFAULT_EXCLUDED_CLASSES =
+      if Gem::Version.new(Rails.version) < Gem::Version.new('7.1')
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+          ActiveRecord::InternalMetadata
+          ActiveRecord::SchemaMigration
+        )
+      else
+        # ActiveRecord::InternalMetadata and SchemaMigration do not inherit from
+        # ActiveRecord::Base in Rails 7.1 so we do not need to exclude them.
+        %w(
+          Delayed::Job
+          PaperTrail::Version
+          ActiveStorage::Attachment
+          ActiveStorage::Blob
+        )
+      end.freeze
 
     mattr_accessor(:default_ignored_columns) { %i(created_at updated_at) }
     mattr_accessor(:default_stream_name) { Journaled.default_stream_name }

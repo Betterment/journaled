@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "aws-sdk-kinesis"
 require "active_job"
 require "json-schema"
