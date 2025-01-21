@@ -1,5 +1,5 @@
 PATH
-  remote: .
+  remote: ..
   specs:
     journaled (5.3.2)
       activejob
@@ -256,15 +256,12 @@ GEM
     zeitwerk (2.7.1)
 
 PLATFORMS
-  aarch64-linux
   aarch64-linux-gnu
   aarch64-linux-musl
-  arm-linux
   arm-linux-gnu
   arm-linux-musl
   arm64-darwin
   x86_64-darwin
-  x86_64-linux
   x86_64-linux-gnu
   x86_64-linux-musl
 
@@ -272,6 +269,7 @@ DEPENDENCIES
   appraisal
   betterlint
   journaled!
+  railties (~> 8.0.0)
   rspec-rails
   rspec_junit_formatter
   spring
