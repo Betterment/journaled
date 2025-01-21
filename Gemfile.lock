@@ -7,7 +7,7 @@ PATH
       activesupport
       aws-sdk-kinesis (< 2)
       json-schema
-      railties (>= 5.2)
+      railties (>= 7.0)
 
 GEM
   remote: https://rubygems.org/
