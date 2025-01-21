@@ -15,6 +15,9 @@ jobs:
           - gemfiles/rails_7_1.gemfile
           - gemfiles/rails_7_2.gemfile
           - gemfiles/rails_8_0.gemfile
+        exclude:
+          - ruby: '3.4'
+            gemfile: gemfiles/rails_7_0.gemfile
     steps:
     - uses: actions/checkout@v2
     - uses: ruby/setup-ruby@v1
