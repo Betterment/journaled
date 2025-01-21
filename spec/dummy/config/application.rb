@@ -17,5 +17,9 @@ module Dummy
     config.active_job.queue_adapter = :test
     config.filter_parameters += [:password]
     config.active_support.deprecation = :raise
+
+    if ActiveJob.gem_version < Gem::Version.new('8.0')
+      config.active_job.enqueue_after_transaction_commit = :never
+    end
   end
 end
