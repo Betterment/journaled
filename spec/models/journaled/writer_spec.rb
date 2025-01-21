@@ -134,11 +134,7 @@ RSpec.describe Journaled::Writer do
 
           it 'defaults to the global default' do
             expect { subject.journal! }.to change {
-              if Rails::VERSION::MAJOR < 6
-                enqueued_jobs.count { |j| j[:job] == Journaled::DeliveryJob }
-              else
-                enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }
-              end
+              enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 999 }
             }.from(0).to(1)
               .and journal_event_including(journaled_event_attributes)
               .with_schema_name('fake_schema_name')
@@ -155,11 +151,7 @@ RSpec.describe Journaled::Writer do
 
           it 'enqueues a Journaled::DeliveryJob with the given priority' do
             expect { subject.journal! }.to change {
-              if Rails::VERSION::MAJOR < 6
-                enqueued_jobs.count { |j| j[:job] == Journaled::DeliveryJob }
-              else
-                enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }
-              end
+              enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 13 }
             }.from(0).to(1)
               .and journal_event_including(journaled_event_attributes)
               .with_schema_name('fake_schema_name')
