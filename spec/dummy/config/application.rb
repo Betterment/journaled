@@ -15,6 +15,7 @@ module Dummy
     config.eager_load = Rails.env.test?
     config.cache_classes = Rails.env.test?
     config.active_job.queue_adapter = :test
+    config.filter_parameters += [:password]
     config.active_support.deprecation = :raise
   end
 end
