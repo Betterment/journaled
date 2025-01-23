@@ -37,6 +37,21 @@ to use one of the following queue adapters:
     `ActiveJob::Base.queue_adapter` is not in the above list, it will raise an exception
     and prevent your application from performing unsafe journaling.**
 
+    The following configurations are __not supported__ by Journaled:
+
+    ```ruby
+    config.active_job.enqueue_after_transaction_commit = :always
+    config.active_job.enqueue_after_transaction_commit = true
+    ```
+
+    If you're using Rails 7.2 with the `:test` adapter, please use the following configuration:
+
+    ```ruby
+    config.active_job.enqueue_after_transaction_commit = :never
+    ```
+
+    This configuration isn't necessary for applications running Rails 8+.
+
 2. To integrate Journaled into your application, simply include the gem in your
 app's Gemfile.
 
@@ -91,7 +106,7 @@ app's Gemfile.
 
 Journaling provides a number of different configuation options that can be set in Ruby using an initializer. Those values are:
 
-#### `Journaled.default_stream_name `
+#### `Journaled.default_stream_name`
 
   This is described in the "Installation" section above, and is used to specify which stream name to use.
 
