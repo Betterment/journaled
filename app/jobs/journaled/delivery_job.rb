@@ -14,8 +14,7 @@ module Journaled
       raise KinesisTemporaryFailure
     end
 
-    def perform(*events, **legacy_kwargs)
-      events << legacy_kwargs if legacy_kwargs.present?
+    def perform(*events)
       @kinesis_records = events.map { |e| KinesisRecord.new(**e.delete_if { |_k, v| v.nil? }) }
 
       journal! if Journaled.enabled?
