@@ -39,7 +39,7 @@ module Journaled
     class << self
       def exclude_classes!
         excluded_classes.each do |name|
-          if Rails::VERSION::MAJOR >= 6 && Rails.autoloaders.zeitwerk_enabled?
+          if Rails.autoloaders.zeitwerk_enabled?
             zeitwerk_exclude!(name)
           else
             classic_exclude!(name)

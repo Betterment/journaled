@@ -75,8 +75,7 @@ module Journaled
       end
 
       def encrypted_column?(key)
-        key.to_s.end_with?('_crypt', '_hmac') ||
-          (Rails::VERSION::MAJOR >= 7 && record.encrypted_attribute?(key))
+        key.to_s.end_with?('_crypt', '_hmac') || record.encrypted_attribute?(key)
       end
 
       def filter_params

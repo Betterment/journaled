@@ -4,7 +4,7 @@ rails_env = ENV['RAILS_ENV'] ||= 'test'
 require 'uncruft'
 require 'active_support/testing/time_helpers'
 
-require File.expand_path('dummy/config/environment.rb', __dir__)
+require_relative 'dummy/config/environment'
 
 Rails.configuration.database_configuration[rails_env].tap do |c|
   ActiveRecord::Tasks::DatabaseTasks.create(c)

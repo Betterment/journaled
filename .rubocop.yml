@@ -5,9 +5,9 @@ inherit_gem:
     - config/default.yml
 
 AllCops:
-  TargetRubyVersion: 2.6
+  TargetRubyVersion: 3.2
   NewCops: enable
   Exclude:
     - 'spec/dummy/db/**/*'
     - 'vendor/**/*'
-    - 'gemfiles/vendor/**/*'
+    - 'gemfiles/*.gemfile'

@@ -30,10 +30,8 @@ RSpec.describe Journaled::AuditLog do
         { all: 'attributes', password: true }
       end
 
-      if Rails::VERSION::MAJOR >= 7
-        def encrypted_attribute?(_key)
-          false
-        end
+      def encrypted_attribute?(_key)
+        false
       end
     end
   end

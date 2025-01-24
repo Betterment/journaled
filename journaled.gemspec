@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
 
   s.files = Dir["{app,config,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
 
-  s.required_ruby_version = ">= 2.6"
+  s.required_ruby_version = ">= 3.2"
 
   s.post_install_message = File.read("UPGRADING") if File.exist?('UPGRADING')
 
@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
   s.add_dependency "activesupport"
   s.add_dependency "aws-sdk-kinesis", "< 2"
   s.add_dependency "json-schema"
-  s.add_dependency "railties", ">= 5.2"
+  s.add_dependency "railties", ">= 7.0", "< 8.1"
 
   s.add_development_dependency "appraisal"
   s.add_development_dependency "betterlint"
@@ -36,7 +36,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rspec-rails"
   s.add_development_dependency "spring"
   s.add_development_dependency "spring-commands-rspec"
-  s.add_development_dependency "sqlite3", '~> 1.4'
   s.add_development_dependency "timecop"
   s.add_development_dependency "uncruft"
   s.add_development_dependency "webmock"

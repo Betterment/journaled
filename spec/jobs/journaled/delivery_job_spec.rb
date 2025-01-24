@@ -88,43 +88,6 @@ RSpec.describe Journaled::DeliveryJob do
       end
     end
 
-    unless Gem::Version.new(Journaled::VERSION) < Gem::Version.new('6.0.0')
-      raise <<~MSG
-        Hey! I see that you're bumping the version to 6.0!
-
-        This is a reminder to:
-        - Remove the `legacy_kwargs` argument (and related logic) from `Journaled::DeliveryJob`
-        - Remove the related test context below
-
-        Thanks!
-      MSG
-    end
-
-    context 'when supplying legacy kwargs (a single event) instead of a list of events' do
-      let(:args) { { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: 'test_events' } }
-
-      it 'makes requests to AWS to put the event on the Kinesis with the correct body' do
-        events = described_class.perform_now(**args)
-
-        expect(events.count).to eq 1
-        expect(events.first.shard_id).to eq '101'
-        expect(events.first.sequence_number).to eq '101123'
-        expect(kinesis_client).to have_received(:put_record).with(
-          stream_name: 'test_events',
-          data: '{"foo":"bar"}',
-          partition_key: 'fake_partition_key',
-        )
-      end
-
-      context 'when the stream name is not set' do
-        let(:args) { { serialized_event: '{"foo":"bar"}', partition_key: 'fake_partition_key', stream_name: nil } }
-
-        it 'raises an ArgumentError' do
-          expect { described_class.perform_now(**args) }.to raise_error ArgumentError, /missing keyword: :?stream_name/
-        end
-      end
-    end
-
     context 'when Amazon responds with an InternalFailure' do
       before do
         kinesis_client.stub_responses(:put_record, 'InternalFailure')
