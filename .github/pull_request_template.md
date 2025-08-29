@@ -12,7 +12,3 @@ request, mention that information here. This could include
 benchmarks, or other information.
 
 > Thanks for contributing to Journaled!
-
-<!-- Please leave the below code review requests in place -->
-/domain @Betterment/journaled-owners
-/platform @jmileham @coreyja @ceslami @danf1024
