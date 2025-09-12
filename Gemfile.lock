@@ -1,13 +1,13 @@
 PATH
   remote: .
   specs:
-    journaled (6.0.0)
+    journaled (6.1.0)
       activejob
       activerecord
       activesupport
       aws-sdk-kinesis (< 2)
       json-schema
-      railties (>= 7.0, < 8.1)
+      railties (>= 7.2, < 8.1)
 
 GEM
   remote: https://rubygems.org/
