@@ -8,6 +8,10 @@ require "journaled/engine"
 require "journaled/current"
 require "journaled/errors"
 require 'journaled/connection'
+require 'journaled/delivery_adapter'
+require 'journaled/delivery_adapters/active_job_adapter'
+require 'journaled/kinesis_client_factory'
+require 'journaled/kinesis_batch_sender'
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
@@ -18,6 +22,7 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
+  mattr_accessor(:delivery_adapter) { Journaled::DeliveryAdapters::ActiveJobAdapter }
   mattr_writer(:transactional_batching_enabled) { true }
 
   def self.transactional_batching_enabled?
@@ -54,21 +59,6 @@ module Journaled
 
   def self.queue_adapter
     job_base_class_name.constantize.queue_adapter_name
-  end
-
-  def self.detect_queue_adapter!
-    unless SUPPORTED_QUEUE_ADAPTERS.include?(queue_adapter)
-      raise <<~MSG
-        Journaled has detected an unsupported ActiveJob queue adapter: `:#{queue_adapter}`
-
-        Journaled jobs must be enqueued transactionally to your primary database.
-
-        Please install the appropriate gems and set `queue_adapter` to one of the following:
-        #{SUPPORTED_QUEUE_ADAPTERS.map { |a| "- `:#{a}`" }.join("\n")}
-
-        Read more at https://github.com/Betterment/journaled
-      MSG
-    end
   end
 
   def self.tagged(**tags)

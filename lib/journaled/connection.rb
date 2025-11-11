@@ -22,17 +22,7 @@ module Journaled
       end
 
       def connection
-        if Journaled.queue_adapter.in? %w(delayed delayed_job)
-          Delayed::Job.connection
-        elsif Journaled.queue_adapter == 'good_job'
-          GoodJob::BaseRecord.connection
-        elsif Journaled.queue_adapter == 'que'
-          Que::ActiveRecord::Model.connection
-        elsif Journaled.queue_adapter == 'test' && Rails.env.test?
-          ActiveRecord::Base.connection
-        else
-          raise "Unsupported adapter: #{Journaled.queue_adapter}"
-        end
+        Journaled.delivery_adapter.transaction_connection
       end
     end
 

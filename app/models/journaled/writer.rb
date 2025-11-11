@@ -42,20 +42,10 @@ class Journaled::Writer
     events.group_by(&:journaled_enqueue_opts).each do |enqueue_opts, batch|
       job_opts = enqueue_opts.reverse_merge(priority: Journaled.job_priority)
       ActiveSupport::Notifications.instrument('journaled.batch.enqueue', batch: batch, **job_opts) do
-        Journaled::DeliveryJob.set(job_opts).perform_later(*delivery_perform_args(batch))
+        Journaled.delivery_adapter.deliver(events: batch, enqueue_opts: job_opts)
 
         batch.each { |event| ActiveSupport::Notifications.instrument('journaled.event.enqueue', event: event, **job_opts) }
       end
-    end
-  end
-
-  def self.delivery_perform_args(events)
-    events.map do |event|
-      {
-        serialized_event: event.journaled_attributes.to_json,
-        partition_key: event.journaled_partition_key,
-        stream_name: event.journaled_stream_name,
-      }
     end
   end
 
