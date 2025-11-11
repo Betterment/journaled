@@ -1,6 +1,26 @@
+<% if ENV['DATABASE_ADAPTER'] == 'postgresql' %>
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: journaled_test
+  username: <%= ENV['DATABASE_USER'] || 'postgres' %>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'postgres' %>
+  host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port: <%= ENV['DATABASE_PORT'] || 5432 %>
+
+development:
+  adapter: postgresql
+  encoding: unicode
+  database: journaled_development
+  username: <%= ENV['DATABASE_USER'] || 'postgres' %>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'postgres' %>
+  host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port: <%= ENV['DATABASE_PORT'] || 5432 %>
+<% else %>
 development:
   adapter: sqlite3
   database: ":memory:"
 test:
   adapter: sqlite3
   database: ":memory:"
+<% end %>
