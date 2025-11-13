@@ -10,8 +10,12 @@ require "journaled/errors"
 require 'journaled/connection'
 require 'journaled/delivery_adapter'
 require 'journaled/delivery_adapters/active_job_adapter'
+require 'journaled/outbox/adapter'
 require 'journaled/kinesis_client_factory'
 require 'journaled/kinesis_batch_sender'
+require 'journaled/outbox/batch_processor'
+require 'journaled/outbox/metric_emitter'
+require 'journaled/outbox/worker'
 
 module Journaled
   SUPPORTED_QUEUE_ADAPTERS = %w(delayed delayed_job good_job que).freeze
@@ -22,8 +26,14 @@ module Journaled
   mattr_accessor(:http_open_timeout) { 2 }
   mattr_accessor(:http_read_timeout) { 60 }
   mattr_accessor(:job_base_class_name) { 'ActiveJob::Base' }
+  mattr_accessor(:outbox_base_class_name) { 'ActiveRecord::Base' }
   mattr_accessor(:delivery_adapter) { Journaled::DeliveryAdapters::ActiveJobAdapter }
   mattr_writer(:transactional_batching_enabled) { true }
+
+  # Worker configuration (for Outbox-style event processing)
+  mattr_accessor(:worker_batch_size) { 500 } # Kinesis PutRecords API max
+  mattr_accessor(:worker_poll_interval) { 5 } # seconds
+  mattr_accessor(:worker_max_attempts) { 3 }
 
   def self.transactional_batching_enabled?
     Thread.current[:journaled_transactional_batching_enabled] || @@transactional_batching_enabled

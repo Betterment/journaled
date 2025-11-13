@@ -476,6 +476,7 @@ RSpec.describe Journaled::Writer do
     let(:event) do
       instance_double(
         event_class,
+        id: SecureRandom.uuid,
         journaled_attributes: { id: 'test_id', event_type: 'test_event' },
         journaled_partition_key: 'test_partition_key',
         journaled_stream_name: 'test_stream',
@@ -500,6 +501,10 @@ RSpec.describe Journaled::Writer do
     end
 
     context 'with Outbox::Adapter' do
+      before do
+        skip "Outbox tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+      end
+
       around do |example|
         old_adapter = Journaled.delivery_adapter
         Journaled.delivery_adapter = Journaled::Outbox::Adapter
@@ -518,9 +523,9 @@ RSpec.describe Journaled::Writer do
           event_type: 'test_event',
           partition_key: 'test_partition_key',
           stream_name: 'test_stream',
-          attempts: 0,
         )
-        expect(created_event.event_data).to eq(event.journaled_attributes.stringify_keys)
+        # Application-level id is excluded - DB generates its own
+        expect(created_event.event_data).to eq(event.journaled_attributes.except(:id).stringify_keys)
       end
     end
   end

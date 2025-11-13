@@ -5,7 +5,7 @@ module Journaled
   #
   # Journaled ships with two delivery adapters:
   #   - Journaled::DeliveryAdapters::ActiveJobAdapter (default) - delivers via ActiveJob
-  #   - Journaled::Outbox::Adapter - delivers via database-backed workers
+  #   - Journaled::Outbox::Adapter - delivers via Outbox-style workers
   #
   class DeliveryAdapter
     # Delivers a batch of events
