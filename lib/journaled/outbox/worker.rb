@@ -40,7 +40,6 @@ module Journaled
 
       # Request graceful shutdown
       def shutdown
-        Rails.logger.info("Shutdown requested for worker #{worker_id}")
         self.shutdown_requested = true
       end
 
@@ -56,7 +55,10 @@ module Journaled
 
       def run_loop
         loop do
-          break if shutdown_requested
+          if shutdown_requested
+            Rails.logger.info("Shutdown requested for worker #{worker_id}")
+            break
+          end
 
           begin
             process_batch
