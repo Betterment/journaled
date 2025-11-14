@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.license     = "MIT"
   s.metadata['rubygems_mfa_required'] = 'true'
 
-  s.files = Dir["{app,config,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
+  s.files = Dir["{app,config,db,lib,journaled_schemas}/**/*", "LICENSE", "Rakefile", "README.md"]
 
   s.required_ruby_version = ">= 3.2"
 

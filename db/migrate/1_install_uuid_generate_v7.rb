@@ -1,11 +1,13 @@
-class InstallUuidGenerateV7 < ActiveRecord::Migration<%= migration_version %>
+# frozen_string_literal: true
+
+class InstallUuidGenerateV7 < ActiveRecord::Migration[7.2]
   def up
     # Enable pgcrypto extension for gen_random_bytes()
     enable_extension 'pgcrypto'
 
     # Install UUID v7 generation function
     # Source: https://github.com/Betterment/postgresql-uuid-generate-v7
-    execute <<-SQL
+    execute <<-SQL.squish
       CREATE OR REPLACE FUNCTION uuid_generate_v7()
       RETURNS uuid
       LANGUAGE plpgsql

@@ -52,6 +52,7 @@ ActiveRecord::Schema.define(version: 20180606205114) do
     t.string "stream_name", null: false
     t.text "failure_reason"
     t.datetime "failed_at"
+    t.datetime "created_at", null: false, default: -> { "clock_timestamp()" }
     t.index ["failed_at"], name: "index_journaled_outbox_events_on_failed_at"
   end
 end

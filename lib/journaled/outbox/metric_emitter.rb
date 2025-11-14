@@ -30,14 +30,13 @@ module Journaled
         emit_metric('journaled.worker.queue_total_count', value: metrics[:total_count])
         emit_metric('journaled.worker.queue_workable_count', value: metrics[:workable_count])
         emit_metric('journaled.worker.queue_erroring_count', value: metrics[:erroring_count])
-
-        emit_metric('journaled.worker.queue_oldest_age_seconds', value: metrics[:oldest_age_seconds] || 0)
+        emit_metric('journaled.worker.queue_oldest_age_seconds', value: metrics[:oldest_age_seconds])
 
         Rails.logger.info(
           "Queue metrics: total=#{metrics[:total_count]}, " \
           "workable=#{metrics[:workable_count]}, " \
           "erroring=#{metrics[:erroring_count]}, " \
-          "oldest_age=#{metrics[:oldest_age_seconds]&.round(2)}s",
+          "oldest_age=#{metrics[:oldest_age_seconds].round(2)}s",
         )
       end
 
@@ -71,13 +70,12 @@ module Journaled
 
         # Oldest non-failed event timestamp
         oldest_timestamp = Event.oldest_non_failed_timestamp
-        oldest_age_seconds = oldest_timestamp ? Time.current - oldest_timestamp : nil
+        oldest_age_seconds = oldest_timestamp ? Time.current - oldest_timestamp : 0
 
         {
           total_count:,
           workable_count:,
           erroring_count:,
-          oldest_non_failed_timestamp: oldest_timestamp,
           oldest_age_seconds:,
         }
       end

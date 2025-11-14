@@ -18,7 +18,7 @@ module Journaled::Event
   end
 
   def created_at
-    @created_at ||= Time.current
+    @created_at ||= Time.zone.now
   end
 
   # Event metadata and configuration (not serialized)

@@ -34,7 +34,7 @@ module Journaled
       def process_batch
         ActiveRecord::Base.transaction do
           events = Event.fetch_batch_for_update
-          Rails.logger.info("Processing batch of #{events.count} events")
+          Rails.logger.info("[journaled] Processing batch of #{events.count} events")
 
           result = batch_sender.send_batch(events)
 
@@ -45,7 +45,7 @@ module Journaled
           mark_events_as_failed(result[:failed]) if result[:failed].any?
 
           Rails.logger.info(
-            "Batch complete: #{result[:succeeded].count} succeeded, " \
+            "[journaled] Batch complete: #{result[:succeeded].count} succeeded, " \
             "#{result[:failed].count} marked as failed",
           )
 

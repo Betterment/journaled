@@ -23,24 +23,28 @@ module Journaled
       def self.deliver(events:, **)
         check_table_exists!
 
-        events.each do |event|
+        records = events.map do |event|
           # Exclude the application-level id - the database will generate its own using uuid_generate_v7()
           event_data = event.journaled_attributes.except(:id)
 
-          Event.create!(
+          {
             event_type: event.journaled_attributes[:event_type],
             event_data:,
             partition_key: event.journaled_partition_key,
             stream_name: event.journaled_stream_name,
-          )
+          }
         end
+
+        # rubocop:disable Rails/SkipsModelValidations
+        Event.insert_all(records) if records.any?
+        # rubocop:enable Rails/SkipsModelValidations
       end
 
       # Check if the required database table exists
       #
       # @raise [TableNotFoundError] if the table doesn't exist
       def self.check_table_exists!
-        return if table_exists_cache
+        return if @table_exists
 
         unless Event.table_exists?
           raise TableNotFoundError, <<~ERROR
@@ -48,7 +52,7 @@ module Journaled
 
             To create the required tables, run:
 
-              rails generate journaled:database_events
+              rake journaled:install:migrations
               rails db:migrate
 
             For more information, see the README:
@@ -56,7 +60,7 @@ module Journaled
           ERROR
         end
 
-        self.table_exists_cache = true
+        @table_exists = true
       end
 
       # Returns the database connection to use for transactional batching
@@ -87,12 +91,6 @@ module Journaled
           and row-level locking for distributed worker coordination. Other databases are not supported.
         ERROR
       end
-
-      # Cache table existence check to avoid repeated queries
-      class << self
-        attr_accessor :table_exists_cache
-      end
-      self.table_exists_cache = false
     end
   end
 end

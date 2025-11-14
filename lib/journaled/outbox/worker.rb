@@ -107,7 +107,7 @@ module Journaled
 
       # Emit metrics if the interval has elapsed
       def emit_metrics_if_needed
-        return unless Time.current - last_metrics_emission >= 60 # 60 seconds = 1 minute
+        return unless Time.current - last_metrics_emission >= 60
 
         # Collect and emit metrics in a background thread to avoid blocking the main loop
         Thread.new do

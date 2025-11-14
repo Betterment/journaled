@@ -31,35 +31,14 @@ RSpec.describe Journaled::Outbox::Event do
     end
   end
 
-  describe '.timestamp_from_uuid' do
-    it 'extracts timestamp from UUID v7' do
-      # UUID v7 with known timestamp: 2024-01-01 00:00:00 UTC (1704067200000 milliseconds)
-      # In hex: 0x18CC251F400 = 018cc251f400
-      uuid_with_known_timestamp = '018cc251-f400-7000-8000-000000000000'
-
-      timestamp = described_class.timestamp_from_uuid(uuid_with_known_timestamp)
-
-      expect(timestamp).to be_within(1.second).of(Time.zone.parse('2024-01-01 00:00:00 UTC'))
-    end
-
-    it 'handles UUID without dashes' do
-      uuid_without_dashes = '018cc251f40070008000000000000000'
-
-      timestamp = described_class.timestamp_from_uuid(uuid_without_dashes)
-
-      expect(timestamp).to be_within(1.second).of(Time.zone.parse('2024-01-01 00:00:00 UTC'))
-    end
-  end
-
   describe '.oldest_non_failed_timestamp' do
     it 'returns nil when no events exist' do
       expect(described_class.oldest_non_failed_timestamp).to be_nil
     end
 
     it 'returns timestamp of oldest non-failed event' do
-      # Create events with different timestamps embedded in their UUIDs
+      # Create events - the database will generate UUIDs, which are ordered chronologically
       older_event = described_class.create!(
-        id: '018cc251-f400-7000-8000-000000000000', # 2024-01-01
         event_type: 'test_event',
         event_data: { test: 'data' },
         partition_key: 'key1',
@@ -67,7 +46,6 @@ RSpec.describe Journaled::Outbox::Event do
       )
 
       described_class.create!(
-        id: '018cc252-0000-7000-8000-000000000000', # slightly newer
         event_type: 'test_event',
         event_data: { test: 'data' },
         partition_key: 'key2',
@@ -75,15 +53,13 @@ RSpec.describe Journaled::Outbox::Event do
       )
 
       timestamp = described_class.oldest_non_failed_timestamp
-      expected_timestamp = described_class.timestamp_from_uuid(older_event.id)
 
-      expect(timestamp).to be_within(1.second).of(expected_timestamp)
+      expect(timestamp).to be_within(1.second).of(older_event.created_at)
     end
 
     it 'ignores failed events' do
-      # Create a failed event with older timestamp
+      # Create a failed event
       described_class.create!(
-        id: '018cc251-f400-7000-8000-000000000000', # 2024-01-01
         event_type: 'test_event',
         event_data: { test: 'data' },
         partition_key: 'key1',
@@ -91,9 +67,8 @@ RSpec.describe Journaled::Outbox::Event do
         failed_at: Time.current,
       )
 
-      # Create a non-failed event with newer timestamp
+      # Create a non-failed event
       newer_event = described_class.create!(
-        id: '018cc252-0000-7000-8000-000000000000', # slightly newer
         event_type: 'test_event',
         event_data: { test: 'data' },
         partition_key: 'key2',
@@ -101,9 +76,8 @@ RSpec.describe Journaled::Outbox::Event do
       )
 
       timestamp = described_class.oldest_non_failed_timestamp
-      expected_timestamp = described_class.timestamp_from_uuid(newer_event.id)
 
-      expect(timestamp).to be_within(1.second).of(expected_timestamp)
+      expect(timestamp).to be_within(1.second).of(newer_event.created_at)
     end
   end
 end

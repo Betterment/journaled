@@ -31,9 +31,8 @@ module Journaled
   mattr_writer(:transactional_batching_enabled) { true }
 
   # Worker configuration (for Outbox-style event processing)
-  mattr_accessor(:worker_batch_size) { 500 } # Kinesis PutRecords API max
+  mattr_accessor(:worker_batch_size) { 500 }
   mattr_accessor(:worker_poll_interval) { 5 } # seconds
-  mattr_accessor(:worker_max_attempts) { 3 }
 
   def self.transactional_batching_enabled?
     Thread.current[:journaled_transactional_batching_enabled] || @@transactional_batching_enabled

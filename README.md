@@ -186,10 +186,10 @@ Journaled includes a built-in Outbox-style delivery adapter with horizontally sc
 
 This feature requires creating database tables and is completely optional. Existing users are unaffected.
 
-1. **Generate migrations:**
+1. **Install migrations:**
 
 ```bash
-rails generate journaled:database_events
+rake journaled:install:migrations
 rails db:migrate
 ```
 
@@ -269,7 +269,6 @@ Inspect and requeue failed events:
 ```ruby
 # Find failed events
 Journaled::Outbox::Event.failed.where(stream_name: 'my_stream')
-Journaled::Outbox::Event.failed_since(1.hour.ago)
 
 # Requeue a failed event (clears failure info and resets attempts)
 failed_event = Journaled::Outbox::Event.failed.find(123)

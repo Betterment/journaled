@@ -21,7 +21,7 @@ RSpec.describe Journaled::Outbox::Adapter do
 
   before do
     # Reset table existence cache
-    described_class.table_exists_cache = false
+    described_class.instance_variable_set(:@table_exists, false)
   end
 
   describe '.validate_configuration!' do
@@ -127,7 +127,7 @@ RSpec.describe Journaled::Outbox::Adapter do
           described_class.deliver(events:, enqueue_opts:)
         }.to raise_error(
           Journaled::Outbox::Adapter::TableNotFoundError,
-          /rails generate journaled:database_events/,
+          /rake journaled:install:migrations/,
         )
       end
     end

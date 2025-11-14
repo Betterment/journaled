@@ -24,7 +24,6 @@ module Journaled
       }
 
       scope :failed, -> { where.not(failed_at: nil) }
-      scope :failed_since, ->(time) { where('failed_at >= ?', time) }
 
       # Fetch a batch of events for processing using SELECT FOR UPDATE
       #
@@ -48,28 +47,11 @@ module Journaled
         )
       end
 
-      # Extract timestamp from UUID v7 id
-      #
-      # UUID v7 embeds a timestamp in the first 48 bits (milliseconds since Unix epoch)
-      #
-      # @return [Time] The timestamp embedded in the UUID
-      def self.timestamp_from_uuid(uuid)
-        # Remove dashes and take first 12 hex characters (48 bits)
-        hex_timestamp = uuid.to_s.delete('-')[0, 12]
-        # Convert from hex to milliseconds since epoch
-        milliseconds = hex_timestamp.to_i(16)
-        # Convert to Time object
-        Time.zone.at(milliseconds / 1000.0)
-      end
-
       # Get the oldest non-failed event's timestamp
       #
       # @return [Time, nil] The timestamp of the oldest event, or nil if no events exist
       def self.oldest_non_failed_timestamp
-        oldest = ready_to_process.order(:id).limit(1).pick(:id)
-        return nil unless oldest
-
-        timestamp_from_uuid(oldest)
+        ready_to_process.order(:id).limit(1).pick(:created_at)
       end
     end
   end
