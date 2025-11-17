@@ -275,30 +275,6 @@ failed_event = Journaled::Outbox::Event.failed.find(123)
 failed_event.requeue!
 ```
 
-6. **Production Deployment:**
-
-Deploy workers as separate services (systemd, Docker, Kubernetes, etc.):
-
-```yaml
-# Example Kubernetes deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: journaled-worker
-spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-      - name: worker
-        image: myapp:latest
-        command: ["bundle", "exec", "rake", "journaled_worker:work"]
-        env:
-        - name: AWS_DEFAULT_REGION
-          value: "us-east-1"
-        # ... other env vars
-```
-
 ### Attribution
 
 Before using `Journaled::Changes` or `Journaled::AuditLog`, you will want to
