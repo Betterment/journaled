@@ -59,23 +59,23 @@ module Journaled
       #
       # @return [Hash] Metrics including counts and oldest event timestamp
       def calculate_queue_metrics
-        # Total count of all events
-        total_count = Event.count
+        # Use a single query with COUNT(*) FILTER to calculate all counts in one table scan
+        result = Event.connection.select_one(
+          Event.select(
+            'COUNT(*) AS total_count',
+            'COUNT(*) FILTER (WHERE failed_at IS NULL) AS workable_count',
+            'COUNT(*) FILTER (WHERE failure_reason IS NOT NULL AND failed_at IS NULL) AS erroring_count',
+            'MIN(created_at) FILTER (WHERE failed_at IS NULL) AS oldest_non_failed_timestamp',
+          ).to_sql,
+        )
 
-        # Workable count - events ready to process (not failed)
-        workable_count = Event.ready_to_process.count
-
-        # Erroring count - events with failure_reason but not failed
-        erroring_count = Event.where.not(failure_reason: nil).where(failed_at: nil).count
-
-        # Oldest non-failed event timestamp
-        oldest_timestamp = Event.oldest_non_failed_timestamp
+        oldest_timestamp = result['oldest_non_failed_timestamp']
         oldest_age_seconds = oldest_timestamp ? Time.current - oldest_timestamp : 0
 
         {
-          total_count:,
-          workable_count:,
-          erroring_count:,
+          total_count: result['total_count'],
+          workable_count: result['workable_count'],
+          erroring_count: result['erroring_count'],
           oldest_age_seconds:,
         }
       end

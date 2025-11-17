@@ -12,6 +12,8 @@ module Journaled
     class Event < Journaled.outbox_base_class_name.constantize
       self.table_name = 'journaled_outbox_events'
 
+      self.record_timestamps = false # use db default
+
       skip_audit_log
 
       attribute :event_data, :json

@@ -46,7 +46,7 @@ module Journaled
 
           Rails.logger.info(
             "[journaled] Batch complete: #{result[:succeeded].count} succeeded, " \
-            "#{result[:failed].count} marked as failed",
+            "#{result[:failed].count} marked as failed (batch size: #{events.count})",
           )
 
           {
@@ -63,28 +63,23 @@ module Journaled
       # Mark events as permanently failed
       # Sets: failed_at = NOW, failure_reason = per-event message
       def mark_events_as_failed(failed_events)
-        ids = failed_events.map { |f| f.event.id }
-        case_statement = build_error_case_statement(failed_events)
+        now = Time.current
 
-        # rubocop:disable Rails/SkipsModelValidations
-        Event.where(id: ids).update_all(
-          "failed_at = '#{Time.current.to_fs(:db)}', failure_reason = #{case_statement}",
-        )
-        # rubocop:enable Rails/SkipsModelValidations
-      end
-
-      # Build a SQL CASE statement to set per-event error messages
-      # Returns: "CASE WHEN id = 'uuid1' THEN 'error1' WHEN id = 'uuid2' THEN 'error2' END"
-      def build_error_case_statement(failed_events)
-        connection = Event.connection
-        cases = failed_events.map do |failed_event|
-          error_message = "#{failed_event.error_code}: #{failed_event.error_message}"
-          sanitized_id = connection.quote(failed_event.event.id)
-          sanitized_error = connection.quote(error_message)
-          "WHEN id = #{sanitized_id} THEN #{sanitized_error}"
+        records = failed_events.map do |failed_event|
+          failed_event.event.attributes.except('created_at').merge(
+            failed_at: now,
+            failure_reason: "#{failed_event.error_code}: #{failed_event.error_message}",
+          )
         end
 
-        "CASE #{cases.join(' ')} END"
+        # rubocop:disable Rails/SkipsModelValidations
+        Event.upsert_all(
+          records,
+          unique_by: :id,
+          on_duplicate: :update,
+          update_only: %i(failed_at failure_reason),
+        )
+        # rubocop:enable Rails/SkipsModelValidations
       end
     end
   end
