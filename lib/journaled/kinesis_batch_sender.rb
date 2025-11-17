@@ -20,12 +20,8 @@ module Journaled
       end
     end
 
-    TRANSIENT_ERROR_CLASSES = [
-      Aws::Kinesis::Errors::InternalFailure,
-      Aws::Kinesis::Errors::ServiceUnavailable,
-      Aws::Kinesis::Errors::Http503Error,
-      Aws::Kinesis::Errors::ProvisionedThroughputExceededException,
-      Seahorse::Client::NetworkingError,
+    PERMANENT_ERROR_CLASSES = [
+      Aws::Kinesis::Errors::ValidationException,
     ].freeze
 
     # Send a batch of database events to Kinesis
@@ -73,23 +69,21 @@ module Journaled
       )
 
       event
-    rescue *TRANSIENT_ERROR_CLASSES => e
-      # Event failed with transient error
-      Rails.logger.error("Kinesis event send failed (transient): #{e.class} - #{e.message}")
-      FailedEvent.new(
-        event:,
-        error_code: e.class.to_s,
-        error_message: e.message,
-        transient: true,
-      )
-    rescue StandardError => e
-      # Event failed with permanent error
+    rescue *PERMANENT_ERROR_CLASSES => e
       Rails.logger.error("Kinesis event send failed (permanent): #{e.class} - #{e.message}")
       FailedEvent.new(
         event:,
         error_code: e.class.to_s,
         error_message: e.message,
         transient: false,
+      )
+    rescue StandardError => e
+      Rails.logger.error("Kinesis event send failed (transient): #{e.class} - #{e.message}")
+      FailedEvent.new(
+        event:,
+        error_code: e.class.to_s,
+        error_message: e.message,
+        transient: true,
       )
     end
 

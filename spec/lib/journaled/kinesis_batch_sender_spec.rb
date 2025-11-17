@@ -124,7 +124,7 @@ RSpec.describe Journaled::KinesisBatchSender do
 
       before do
         allow(kinesis_client).to receive(:put_record)
-          .and_raise(Aws::Kinesis::Errors::InvalidArgumentException.new(nil, 'Invalid data'))
+          .and_raise(Aws::Kinesis::Errors::ValidationException.new(nil, 'Invalid data'))
       end
 
       it 'returns failed event with non-transient flag' do
@@ -133,7 +133,7 @@ RSpec.describe Journaled::KinesisBatchSender do
         expect(result[:failed].length).to eq(1)
         failure = result[:failed].first
         expect(failure.event).to eq(event)
-        expect(failure.error_code).to eq('Aws::Kinesis::Errors::InvalidArgumentException')
+        expect(failure.error_code).to eq('Aws::Kinesis::Errors::ValidationException')
         expect(failure.error_message).to eq('Invalid data')
         expect(failure.transient?).to be false
         expect(failure.permanent?).to be true
