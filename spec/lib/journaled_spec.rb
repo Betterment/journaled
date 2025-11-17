@@ -51,41 +51,4 @@ RSpec.describe Journaled do
       expect(described_class.actor_uri).to eq "my actor uri"
     end
   end
-
-  describe '.detect_queue_adapter!' do
-    it 'raises an error unless the queue adapter is DB-backed' do
-      expect { described_class.detect_queue_adapter! }.to raise_error <<~MSG
-        Journaled has detected an unsupported ActiveJob queue adapter: `:test`
-
-        Journaled jobs must be enqueued transactionally to your primary database.
-
-        Please install the appropriate gems and set `queue_adapter` to one of the following:
-        - `:delayed`
-        - `:delayed_job`
-        - `:good_job`
-        - `:que`
-
-        Read more at https://github.com/Betterment/journaled
-      MSG
-    end
-
-    context 'when the queue adapter is supported' do
-      before do
-        stub_const("ActiveJob::QueueAdapters::DelayedAdapter", Class.new)
-        ActiveJob::Base.disable_test_adapter
-        ActiveJob::Base.queue_adapter = :delayed
-      end
-
-      around do |example|
-        example.run
-      ensure
-        ActiveJob::Base.queue_adapter = :test
-        ActiveJob::Base.enable_test_adapter(ActiveJob::QueueAdapters::TestAdapter.new)
-      end
-
-      it 'does not raise an error' do
-        expect { described_class.detect_queue_adapter! }.not_to raise_error
-      end
-    end
-  end
 end

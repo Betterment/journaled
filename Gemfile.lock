@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    journaled (6.1.0)
+    journaled (6.2.0)
       activejob
       activerecord
       activesupport
@@ -119,6 +119,8 @@ GEM
     parser (3.3.7.0)
       ast (~> 2.4.1)
       racc
+    pg (1.6.2-arm64-darwin)
+    pg (1.6.2-x86_64-linux)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -245,6 +247,7 @@ DEPENDENCIES
   appraisal
   betterlint
   journaled!
+  pg
   rspec-rails
   rspec_junit_formatter
   spring

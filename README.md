@@ -22,9 +22,11 @@ durable, eventually consistent record that discrete events happened.
 
 ## Installation
 
-1. If you haven't already,
-[configure ActiveJob](https://guides.rubyonrails.org/active_job_basics.html)
-to use one of the following queue adapters:
+1. **Configure a queue adapter** (only required if using the default ActiveJob delivery adapter):
+
+    If you haven't already,
+    [configure ActiveJob](https://guides.rubyonrails.org/active_job_basics.html)
+    to use one of the following queue adapters:
 
     - `:delayed_job` (via `delayed_job_active_record`)
     - `:que`
@@ -51,6 +53,8 @@ to use one of the following queue adapters:
     ```
 
     This configuration isn't necessary for applications running Rails 8+.
+
+    **Note:** If you plan to use the [Outbox-style Event Processing](#outbox-style-event-processing-optional) (Outbox adapter), you can skip this step entirely, as the Outbox adapter does not use ActiveJob.
 
 2. To integrate Journaled into your application, simply include the gem in your
 app's Gemfile.
@@ -129,6 +133,37 @@ Journaling provides a number of different configuation options that can be set i
 
   The number of seconds before the :http_handler should timeout while waiting for a HTTP response.
 
+#### `Journaled.delivery_adapter` (default: `Journaled::DeliveryAdapters::ActiveJobAdapter`)
+
+  Determines how events are delivered to Kinesis. Two options are available:
+
+  - **`Journaled::DeliveryAdapters::ActiveJobAdapter`** (default) - Enqueues events to ActiveJob. Requires a DB-backed queue adapter (see Installation).
+
+  - **`Journaled::Outbox::Adapter`** - Stores events in a database table and processes them via separate worker daemons. See [Outbox-style Event Processing](#outbox-style-event-processing-optional) for setup instructions.
+
+  Example:
+  ```ruby
+  # Use the Outbox-style adapter
+  Journaled.delivery_adapter = Journaled::Outbox::Adapter
+  ```
+
+#### `Journaled.outbox_base_class_name` (default: `'ActiveRecord::Base'`)
+
+  **Only relevant when using `Journaled::Outbox::Adapter`.**
+
+  Specifies which ActiveRecord base class the Outbox event storage model (`Journaled::Outbox::Event`) should use for its database connection. This is useful for multi-database setups where you want to store events in a separate database.
+
+  Example:
+  ```ruby
+  # Store outbox events in a separate database
+  class EventsRecord < ActiveRecord::Base
+    self.abstract_class = true
+    connects_to database: { writing: :events, reading: :events }
+  end
+
+  Journaled.outbox_base_class_name = 'EventsRecord'
+  ```
+
 #### ActiveJob `set` options
 
 Both model-level directives accept additional options to be passed into ActiveJob's `set` method:
@@ -142,6 +177,102 @@ has_audit_log enqueue_with: { priority: 30 }
 
 # Or for custom journaling:
 journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
+```
+##### Outbox-style Event Processing (Optional)
+
+Journaled includes a built-in Outbox-style delivery adapter with horizontally scalable workers.
+
+**Setup:**
+
+This feature requires creating database tables and is completely optional. Existing users are unaffected.
+
+1. **Install migrations:**
+
+```bash
+rake journaled:install:migrations
+rails db:migrate
+```
+
+This creates a table for storing events:
+- `journaled_outbox_events` - Queue of events to be processed (includes `failed_at` column for tracking failures)
+
+2. **Configure to use the database adapter:**
+
+```ruby
+# config/initializers/journaled.rb
+
+# Use the Outbox-style adapter instead of ActiveJob
+Journaled.delivery_adapter = Journaled::Outbox::Adapter
+
+# Optional: Customize worker behavior (these are the defaults)
+Journaled.worker_batch_size = 500        # Max events per Kinesis batch (Kinesis API limit)
+Journaled.worker_poll_interval = 5       # Seconds between polls
+```
+
+**Note:** When using the Outbox adapter, you do **not** need to configure an ActiveJob queue adapter (skip step 1 of Installation). The Outbox adapter uses the `journaled_outbox_events` table for event storage and its own worker daemons for processing, making it independent of ActiveJob. Transactional batching still works seamlessly with the Outbox adapter.
+
+3. **Start worker daemon(s):**
+
+```bash
+bundle exec rake journaled_worker:work
+```
+
+4. **Monitoring:**
+
+The system emits `ActiveSupport::Notifications` events:
+
+```ruby
+# config/initializers/journaled.rb
+
+# Emitted for every batch processed (regardless of outcome)
+ActiveSupport::Notifications.subscribe('journaled.worker.batch_process') do |name, start, finish, id, payload|
+  Statsd.increment('journaled.worker.batches', tags: ["worker:#{payload[:worker_id]}"])
+end
+
+# Emitted for successfully sent events
+ActiveSupport::Notifications.subscribe('journaled.worker.batch_sent') do |name, start, finish, id, payload|
+  Statsd.increment('journaled.worker.events_sent', payload[:event_count], tags: ["worker:#{payload[:worker_id]}"])
+end
+
+# Emitted for permanently failed events (marked as failed in database)
+ActiveSupport::Notifications.subscribe('journaled.worker.batch_failed') do |name, start, finish, id, payload|
+  Statsd.increment('journaled.worker.events_failed', payload[:event_count], tags: ["worker:#{payload[:worker_id]}"])
+end
+
+# Emitted for transiently failed events (will be retried)
+ActiveSupport::Notifications.subscribe('journaled.worker.batch_errored') do |name, start, finish, id, payload|
+  Statsd.increment('journaled.worker.events_errored', payload[:event_count], tags: ["worker:#{payload[:worker_id]}"])
+end
+
+# Emitted once per minute with queue statistics
+ActiveSupport::Notifications.subscribe('journaled.worker.queue_metrics') do |name, start, finish, id, payload|
+  Statsd.gauge('journaled.worker.queue.total', payload[:total_count], tags: ["worker:#{payload[:worker_id]}"])
+  Statsd.gauge('journaled.worker.queue.workable', payload[:workable_count], tags: ["worker:#{payload[:worker_id]}"])
+  Statsd.gauge('journaled.worker.queue.erroring', payload[:erroring_count], tags: ["worker:#{payload[:worker_id]}"])
+  Statsd.gauge('journaled.worker.queue.oldest_age_seconds', payload[:oldest_age_seconds], tags: ["worker:#{payload[:worker_id]}"]) if payload[:oldest_age_seconds]
+end
+```
+
+Queue metrics payload includes:
+- `total_count` - Total number of events in the queue (including failed)
+- `workable_count` - Events ready to be processed (not failed)
+- `erroring_count` - Events with errors but not yet marked as permanently failed
+- `oldest_non_failed_timestamp` - Timestamp of the oldest non-failed event (extracted from UUID v7)
+- `oldest_age_seconds` - Age in seconds of the oldest non-failed event
+
+Note: Metrics are collected in a background thread to avoid blocking the main worker loop.
+
+5. **Failed Events:**
+
+Inspect and requeue failed events:
+
+```ruby
+# Find failed events
+Journaled::Outbox::Event.failed.where(stream_name: 'my_stream')
+
+# Requeue a failed event (clears failure info and resets attempts)
+failed_event = Journaled::Outbox::Event.failed.find(123)
+failed_event.requeue!
 ```
 
 ### Attribution

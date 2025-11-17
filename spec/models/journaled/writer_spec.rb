@@ -470,4 +470,63 @@ RSpec.describe Journaled::Writer do
       end
     end
   end
+
+  describe '.enqueue!' do
+    let(:event_class) { Class.new { include Journaled::Event } }
+    let(:event) do
+      instance_double(
+        event_class,
+        id: SecureRandom.uuid,
+        journaled_attributes: { id: 'test_id', event_type: 'test_event' },
+        journaled_partition_key: 'test_partition_key',
+        journaled_stream_name: 'test_stream',
+        journaled_enqueue_opts: { priority: 10 },
+      )
+    end
+
+    context 'with ActiveJobAdapter (default)' do
+      it 'enqueues the event to Journaled::DeliveryJob with the configured priority' do
+        expect {
+          described_class.enqueue!(event)
+        }.to change { enqueued_jobs.count { |j| j['job_class'] == 'Journaled::DeliveryJob' && j['priority'] == 10 } }
+          .from(0).to(1)
+
+        enqueued_job = enqueued_jobs.last
+        expect(enqueued_job[:args].first).to include(
+          'serialized_event' => event.journaled_attributes.to_json,
+          'partition_key' => 'test_partition_key',
+          'stream_name' => 'test_stream',
+        )
+      end
+    end
+
+    context 'with Outbox::Adapter' do
+      before do
+        skip "Outbox tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+      end
+
+      around do |example|
+        old_adapter = Journaled.delivery_adapter
+        Journaled.delivery_adapter = Journaled::Outbox::Adapter
+        example.run
+        Journaled.delivery_adapter = old_adapter
+      end
+
+      it 'creates a database record instead of enqueuing a job' do
+        expect {
+          described_class.enqueue!(event)
+        }.to change { Journaled::Outbox::Event.count }.from(0).to(1)
+          .and not_change { enqueued_jobs.count }
+
+        created_event = Journaled::Outbox::Event.last
+        expect(created_event).to have_attributes(
+          event_type: 'test_event',
+          partition_key: 'test_partition_key',
+          stream_name: 'test_stream',
+        )
+        # Application-level id is excluded - DB generates its own
+        expect(created_event.event_data).to eq(event.journaled_attributes.except(:id).stringify_keys)
+      end
+    end
+  end
 end

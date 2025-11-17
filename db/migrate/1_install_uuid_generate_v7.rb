@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+class InstallUuidGenerateV7 < ActiveRecord::Migration[7.2]
+  def up
+    # Enable pgcrypto extension for gen_random_bytes()
+    enable_extension 'pgcrypto'
+
+    # Install UUID v7 generation function
+    # Source: https://github.com/Betterment/postgresql-uuid-generate-v7
+    execute <<-SQL.squish
+      CREATE OR REPLACE FUNCTION uuid_generate_v7()
+      RETURNS uuid
+      LANGUAGE plpgsql
+      PARALLEL SAFE
+      AS $$
+      DECLARE
+        unix_time_ms CONSTANT bytea NOT NULL DEFAULT substring(int8send((extract(epoch FROM clock_timestamp()) * 1000)::bigint) from 3);
+        buffer bytea NOT NULL DEFAULT unix_time_ms || gen_random_bytes(10);
+      BEGIN
+        buffer = set_byte(buffer, 6, (b'0111' || get_byte(buffer, 6)::bit(4))::bit(8)::int);
+        buffer = set_byte(buffer, 8, (b'10' || get_byte(buffer, 8)::bit(6))::bit(8)::int);
+        RETURN encode(buffer, 'hex');
+      END
+      $$;
+    SQL
+  end
+end
