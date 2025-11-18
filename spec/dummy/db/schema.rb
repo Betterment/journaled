@@ -38,21 +38,17 @@ ActiveRecord::Schema.define(version: 20180606205114) do
     t.string "other_column"
   end
 
-  # Use uuid_generate_v7() for PostgreSQL, nil for SQLite (outbox tests require PostgreSQL)
-  id_default = if ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
-    -> { "uuid_generate_v7()" }
-  else
-    nil
-  end
-
-  create_table "journaled_outbox_events", id: :uuid, default: id_default, force: :cascade do |t|
-    t.string "event_type", null: false
-    t.text "event_data", null: false
-    t.string "partition_key", null: false
-    t.string "stream_name", null: false
-    t.text "failure_reason"
-    t.datetime "failed_at"
-    t.datetime "created_at", null: false, default: -> { "clock_timestamp()" }
-    t.index ["failed_at"], name: "index_journaled_outbox_events_on_failed_at"
+  # Outbox events table is PostgreSQL-only (uses jsonb, timestamptz, uuid_generate_v7)
+  if ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+    create_table "journaled_outbox_events", id: :uuid, default: -> { "uuid_generate_v7()" }, force: :cascade do |t|
+      t.string "event_type", null: false
+      t.jsonb "event_data", null: false
+      t.string "partition_key", null: false
+      t.string "stream_name", null: false
+      t.text "failure_reason"
+      t.timestamptz "failed_at"
+      t.timestamptz "created_at", null: false, default: -> { "clock_timestamp()" }
+      t.index ["failed_at"], name: "index_journaled_outbox_events_on_failed_at"
+    end
   end
 end
