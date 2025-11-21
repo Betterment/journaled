@@ -248,7 +248,7 @@ Journaled.outbox_processing_mode = :batch
 bundle exec rake journaled_worker:work
 ```
 
-**Note:** In `:batch` mode (the default), you can run multiple worker processes concurrently for horizontal scaling. In `:guaranteed_order` mode, the current implementation requires running a single worker to maintain ordering guarantees.
+**Note:** In `:batch` mode (the default), you can run multiple worker processes concurrently for horizontal scaling. In `:guaranteed_order` mode, the current implementation is optimized for running a single worker to maintain ordering guarantees.
 
 4. **Monitoring:**
 
