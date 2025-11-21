@@ -172,7 +172,7 @@ Journaling provides a number of different configuation options that can be set i
 
   - **`:batch`** (default) - Uses the Kinesis `put_records` batch API for high throughput. Events are sent in parallel batches, allowing multiple workers to run concurrently. Best for most use cases where strict ordering is not required.
 
-  - **`:guaranteed_order`** - Uses the Kinesis `put_record` single-event API to send events sequentially. Events are processed one at a time in order, stopping on the first transient failure to preserve ordering. Use this when you need strict ordering guarantees per partition key.
+  - **`:guaranteed_order`** - Uses the Kinesis `put_record` single-event API to send events sequentially. Events are processed one at a time in order, stopping on the first transient failure to preserve ordering. Use this when you need strict ordering guarantees per partition key. Note: The current implementation requires single-threaded processing, but future optimizations may support batching and multi-threading by partition key.
 
   Example:
   ```ruby
@@ -234,7 +234,9 @@ Journaled.worker_poll_interval = 5       # Seconds between polls
 #            Events are sent in parallel batches. Multiple workers can run concurrently.
 # - :guaranteed_order - Uses Kinesis put_record single-event API for sequential processing
 #                       Events are sent one at a time in order. Use this if you need
-#                       strict ordering guarantees per partition key.
+#                       strict ordering guarantees per partition key. The current
+#                       implementation processes events single-threaded, though future
+#                       optimizations may support batching/multi-threading by partition key.
 Journaled.outbox_processing_mode = :batch
 ```
 
@@ -246,7 +248,7 @@ Journaled.outbox_processing_mode = :batch
 bundle exec rake journaled_worker:work
 ```
 
-**Note:** In `:batch` mode (the default), you can run multiple worker processes concurrently for horizontal scaling. In `:guaranteed_order` mode, only run a single worker to maintain ordering guarantees.
+**Note:** In `:batch` mode (the default), you can run multiple worker processes concurrently for horizontal scaling. In `:guaranteed_order` mode, the current implementation requires running a single worker to maintain ordering guarantees.
 
 4. **Monitoring:**
 
