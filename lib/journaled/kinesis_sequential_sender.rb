@@ -10,16 +10,6 @@ module Journaled
   #
   # Returns structured results for the caller to handle event state management.
   class KinesisSequentialSender
-    FailedEvent = Struct.new(:event, :error_code, :error_message, :transient, keyword_init: true) do
-      def transient?
-        transient
-      end
-
-      def permanent?
-        !transient
-      end
-    end
-
     PERMANENT_ERROR_CLASSES = [
       Aws::Kinesis::Errors::ValidationException,
     ].freeze
@@ -37,7 +27,7 @@ module Journaled
 
       events.each do |event|
         event_result = send_event(event)
-        if event_result.is_a?(FailedEvent)
+        if event_result.is_a?(Journaled::KinesisFailedEvent)
           if event_result.transient?
             emit_transient_failure_metric
             break
@@ -59,27 +49,24 @@ module Journaled
     # @param event [Journaled::Outbox::Event] Event to send
     # @return [Journaled::Outbox::Event, FailedEvent] The event on success, or FailedEvent on failure
     def send_event(event)
-      # Merge the DB-generated ID into the event data before sending to Kinesis
-      event_data_with_id = event.event_data.merge(id: event.id)
-
       kinesis_client.put_record(
         stream_name: event.stream_name,
-        data: event_data_with_id.to_json,
+        data: event.event_data.merge(id: event.id).to_json,
         partition_key: event.partition_key,
       )
 
       event
     rescue *PERMANENT_ERROR_CLASSES => e
-      Rails.logger.error("Kinesis event send failed (permanent): #{e.class} - #{e.message}")
-      FailedEvent.new(
+      Rails.logger.error("[Journaled] Kinesis event send failed (permanent): #{e.class} - #{e.message}")
+      Journaled::KinesisFailedEvent.new(
         event:,
         error_code: e.class.to_s,
         error_message: e.message,
         transient: false,
       )
     rescue StandardError => e
-      Rails.logger.error("Kinesis event send failed (transient): #{e.class} - #{e.message}")
-      FailedEvent.new(
+      Rails.logger.error("[Journaled] Kinesis event send failed (transient): #{e.class} - #{e.message}")
+      Journaled::KinesisFailedEvent.new(
         event:,
         error_code: e.class.to_s,
         error_message: e.message,

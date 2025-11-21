@@ -3,18 +3,19 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::KinesisSequentialSender do
-  let(:sender) { described_class.new }
+  subject { described_class.new }
+
   let(:kinesis_client) { instance_double(Aws::Kinesis::Client) }
 
   before do
     allow(Rails.logger).to receive(:error)
-    allow(sender).to receive(:kinesis_client).and_return(kinesis_client)
+    allow(Journaled::KinesisClientFactory).to receive(:build).and_return(kinesis_client)
   end
 
   describe '#send_batch' do
     context 'with empty events array' do
       it 'returns empty arrays' do
-        result = sender.send_batch([])
+        result = subject.send_batch([])
         expect(result).to eq(succeeded: [], failed: [])
       end
     end
@@ -29,12 +30,14 @@ RSpec.describe Journaled::KinesisSequentialSender do
       let(:events) { [event_1, event_2] }
 
       before do
-        # Mock successful put_record response (returns empty struct)
-        allow(kinesis_client).to receive(:put_record).and_return(double)
+        # Mock successful put_record response
+        allow(kinesis_client).to receive(:put_record).and_return(
+          instance_double(Aws::Kinesis::Types::PutRecordOutput),
+        )
       end
 
       it 'sends records to Kinesis one at a time with DB-generated ID merged into event_data' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         expect(kinesis_client).to have_received(:put_record).with(
           stream_name: 'stream1',
@@ -50,7 +53,7 @@ RSpec.describe Journaled::KinesisSequentialSender do
       end
 
       it 'returns succeeded events' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
         expect(result[:succeeded]).to eq([event_1, event_2])
         expect(result[:failed]).to be_empty
       end
@@ -73,18 +76,18 @@ RSpec.describe Journaled::KinesisSequentialSender do
             raise Aws::Kinesis::Errors::ProvisionedThroughputExceededException.new(nil, 'Rate exceeded')
           end
 
-          double
+          instance_double(Aws::Kinesis::Types::PutRecordOutput)
         end
       end
 
       it 'returns first successful event and stops processing' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
         expect(result[:succeeded]).to eq([event_1])
-        expect(result[:failed]).to be_empty # Transient failures are NOT returned
+        expect(result[:failed]).to be_empty
       end
 
       it 'does not send remaining events after transient failure' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         # Should have sent event_1, attempted event_2, but NOT attempted event_3
         expect(kinesis_client).to have_received(:put_record).twice
@@ -96,7 +99,7 @@ RSpec.describe Journaled::KinesisSequentialSender do
           'journaled.kinesis_sequential_sender.transient_failure',
         ).and_call_original
 
-        sender.send_batch(events)
+        subject.send_batch(events)
       end
     end
 
@@ -117,12 +120,12 @@ RSpec.describe Journaled::KinesisSequentialSender do
             raise Aws::Kinesis::Errors::ValidationException.new(nil, 'Invalid record')
           end
 
-          double
+          instance_double(Aws::Kinesis::Types::PutRecordOutput)
         end
       end
 
       it 'returns succeeded and failed events, continues processing after permanent failure' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
         expect(result[:succeeded]).to eq([event_1, event_3])
         expect(result[:failed].length).to eq(1)
 
@@ -135,7 +138,7 @@ RSpec.describe Journaled::KinesisSequentialSender do
       end
 
       it 'continues sending remaining events after permanent failure' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         # Should have sent all three events
         expect(kinesis_client).to have_received(:put_record).exactly(3).times
@@ -165,12 +168,12 @@ RSpec.describe Journaled::KinesisSequentialSender do
             raise Aws::Kinesis::Errors::ServiceUnavailable.new(nil, 'Service unavailable')
           end
 
-          double
+          instance_double(Aws::Kinesis::Types::PutRecordOutput)
         end
       end
 
       it 'processes permanent failures but stops on transient failure' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
 
         expect(result[:succeeded]).to eq([event_1])
         expect(result[:failed].length).to eq(1)
@@ -179,7 +182,7 @@ RSpec.describe Journaled::KinesisSequentialSender do
       end
 
       it 'does not send events after transient failure' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         # Should have sent events 1, 2, 3 but NOT 4
         expect(kinesis_client).to have_received(:put_record).exactly(3).times

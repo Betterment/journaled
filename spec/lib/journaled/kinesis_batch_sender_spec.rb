@@ -3,18 +3,19 @@
 require 'rails_helper'
 
 RSpec.describe Journaled::KinesisBatchSender do
-  let(:sender) { described_class.new }
+  subject { described_class.new }
+
   let(:kinesis_client) { instance_double(Aws::Kinesis::Client) }
 
   before do
     allow(Rails.logger).to receive(:error)
-    allow(sender).to receive(:kinesis_client).and_return(kinesis_client)
+    allow(Journaled::KinesisClientFactory).to receive(:build).and_return(kinesis_client)
   end
 
   describe '#send_batch' do
     context 'with empty events array' do
       it 'returns empty arrays' do
-        result = sender.send_batch([])
+        result = subject.send_batch([])
         expect(result).to eq(succeeded: [], failed: [])
       end
     end
@@ -29,7 +30,6 @@ RSpec.describe Journaled::KinesisBatchSender do
       let(:events) { [event_1, event_2] }
 
       before do
-        # Mock successful put_records response
         response = mock_put_records_response([
           { error_code: nil, error_message: nil },
           { error_code: nil, error_message: nil },
@@ -38,7 +38,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       end
 
       it 'sends records to Kinesis with DB-generated ID merged into event_data' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         expect(kinesis_client).to have_received(:put_records).with(
           stream_name: 'stream1',
@@ -56,7 +56,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       end
 
       it 'returns succeeded events' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
         expect(result[:succeeded]).to eq([event_1, event_2])
         expect(result[:failed]).to be_empty
       end
@@ -69,20 +69,24 @@ RSpec.describe Journaled::KinesisBatchSender do
 
       let(:event_1) { create_database_event(stream_name: 'stream1') }
       let(:event_2) { create_database_event(stream_name: 'stream1') }
-      let(:events) { [event_1, event_2] }
+      let(:event_3) { create_database_event(stream_name: 'stream1') }
+      let(:events) { [event_1, event_2, event_3] }
 
       before do
-        # First event succeeds, second event fails with transient error
         response = mock_put_records_response([
           { error_code: nil, error_message: nil },
           { error_code: 'ProvisionedThroughputExceededException', error_message: 'Rate exceeded' },
+          { error_code: nil, error_message: nil },
         ])
         allow(kinesis_client).to receive(:put_records).and_return(response)
       end
 
-      it 'returns successful event and transient failure' do
-        result = sender.send_batch(events)
-        expect(result[:succeeded]).to eq([event_1])
+      it 'collects all batch results including transient failures' do
+        result = subject.send_batch(events)
+
+        # Both successful events should be collected
+        expect(result[:succeeded]).to eq([event_1, event_3])
+        # Transient failure should be in failed array
         expect(result[:failed].length).to eq(1)
 
         failure = result[:failed].first
@@ -91,29 +95,6 @@ RSpec.describe Journaled::KinesisBatchSender do
         expect(failure.error_message).to eq('Rate exceeded')
         expect(failure.transient?).to be true
         expect(failure.permanent?).to be false
-      end
-
-      it 'collects all batch results including transient failures' do
-        # Test with 3 events: success, transient failure, success
-        # All were sent in the batch, so all results should be collected
-        event_3 = create_database_event(stream_name: 'stream1')
-        events_with_middle_failure = [event_1, event_2, event_3]
-
-        response = mock_put_records_response([
-          { error_code: nil, error_message: nil },
-          { error_code: 'ProvisionedThroughputExceededException', error_message: 'Rate exceeded' },
-          { error_code: nil, error_message: nil },
-        ])
-        allow(kinesis_client).to receive(:put_records).and_return(response)
-
-        result = sender.send_batch(events_with_middle_failure)
-
-        # Both successful events should be collected
-        expect(result[:succeeded]).to eq([event_1, event_3])
-        # Transient failure should be in failed array
-        expect(result[:failed].length).to eq(1)
-        expect(result[:failed].first.event).to eq(event_2)
-        expect(result[:failed].first.transient?).to be true
       end
     end
 
@@ -131,7 +112,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       end
 
       it 'returns all events as transient failures' do
-        result = sender.send_batch(events)
+        result = subject.send_batch(events)
         expect(result[:succeeded]).to be_empty
         expect(result[:failed].length).to eq(1)
 
@@ -159,7 +140,7 @@ RSpec.describe Journaled::KinesisBatchSender do
         end
 
         it 'raises the exception (configuration error, not event data error)' do
-          expect { sender.send_batch(events) }.to raise_error(
+          expect { subject.send_batch(events) }.to raise_error(
             Aws::Kinesis::Errors::ValidationException,
             'Invalid stream name',
           )
@@ -181,7 +162,7 @@ RSpec.describe Journaled::KinesisBatchSender do
         end
 
         it 'returns succeeded and failed events, continues processing' do
-          result = sender.send_batch(events)
+          result = subject.send_batch(events)
           expect(result[:succeeded]).to eq([event_1])
           expect(result[:failed].length).to eq(1)
           failure = result[:failed].first
@@ -223,7 +204,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       end
 
       it 'groups events by stream and sends batches to each stream' do
-        sender.send_batch(events)
+        subject.send_batch(events)
 
         # Should send one batch to stream1 with events 1 and 3
         expect(kinesis_client).to have_received(:put_records).with(

@@ -10,16 +10,6 @@ module Journaled
   #
   # Returns structured results for the caller to handle event state management.
   class KinesisBatchSender
-    FailedEvent = Struct.new(:event, :error_code, :error_message, :transient, keyword_init: true) do
-      def transient?
-        transient
-      end
-
-      def permanent?
-        !transient
-      end
-    end
-
     # Per-record error codes that indicate permanent failures (bad event data)
     PERMANENT_ERROR_CODES = [
       'ValidationException',
@@ -88,21 +78,11 @@ module Journaled
     end
 
     def create_failed_event(event, record_result)
-      failed_event = FailedEvent.new(
+      Journaled::KinesisFailedEvent.new(
         event:,
         error_code: record_result.error_code,
         error_message: record_result.error_message,
         transient: PERMANENT_ERROR_CODES.exclude?(record_result.error_code),
-      )
-
-      log_failure(failed_event)
-      failed_event
-    end
-
-    def log_failure(failed_event)
-      severity = failed_event.transient? ? 'transient' : 'permanent'
-      Rails.logger.error(
-        "Kinesis event send failed (#{severity}): #{failed_event.error_code} - #{failed_event.error_message}",
       )
     end
 
@@ -110,7 +90,7 @@ module Journaled
       Rails.logger.error("Kinesis batch send failed (transient): #{error.class} - #{error.message}")
 
       failed = stream_events.map do |event|
-        FailedEvent.new(
+        Journaled::KinesisFailedEvent.new(
           event:,
           error_code: error.class.to_s,
           error_message: error.message,

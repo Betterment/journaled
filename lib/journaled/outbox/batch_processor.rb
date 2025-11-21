@@ -43,17 +43,12 @@ module Journaled
 
           result = batch_sender.send_batch(events)
 
-          # Delete successful events
           Event.where(id: result[:succeeded].map(&:id)).delete_all if result[:succeeded].any?
 
-          # Separate permanent and transient failures
           permanent_failures = result[:failed].select(&:permanent?)
           transient_failures = result[:failed].select(&:transient?)
 
-          # Mark only permanently failed events
           mark_events_as_failed(permanent_failures) if permanent_failures.any?
-
-          # Transient failures are left untouched - they'll be retried in the next batch
 
           Rails.logger.info(
             "[journaled] Batch complete: #{result[:succeeded].count} succeeded, " \

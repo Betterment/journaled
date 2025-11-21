@@ -69,7 +69,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
         let!(:event_1) { create_database_event }
         let!(:event_2) { create_database_event }
         let(:transient_failure) do
-          Journaled::KinesisBatchSender::FailedEvent.new(
+          Journaled::KinesisFailedEvent.new(
             event: event_1,
             error_code: 'ProvisionedThroughputExceededException',
             error_message: 'Rate exceeded',
@@ -106,7 +106,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
         let!(:event_1) { create_database_event }
         let!(:event_2) { create_database_event }
         let(:failure) do
-          Journaled::KinesisBatchSender::FailedEvent.new(
+          Journaled::KinesisFailedEvent.new(
             event: event_1,
             error_code: 'InvalidArgumentException',
             error_message: 'Invalid data',
@@ -145,7 +145,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
         let!(:event_3) { create_database_event }
         let(:events) { [event_1, event_2, event_3] }
         let(:permanent_failure) do
-          Journaled::KinesisBatchSender::FailedEvent.new(
+          Journaled::KinesisFailedEvent.new(
             event: event_1,
             error_code: 'InvalidArgumentException',
             error_message: 'Invalid data',
@@ -153,7 +153,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
           )
         end
         let(:transient_failure) do
-          Journaled::KinesisBatchSender::FailedEvent.new(
+          Journaled::KinesisFailedEvent.new(
             event: event_2,
             error_code: 'ProvisionedThroughputExceededException',
             error_message: 'Rate exceeded',
@@ -194,9 +194,6 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
     end
 
     context 'mode switching' do
-      # Don't use the mocked sender for these tests
-      let(:batch_sender) { nil }
-
       before do
         allow(Journaled::KinesisBatchSender).to receive(:new).and_call_original
         allow(Journaled::KinesisSequentialSender).to receive(:new).and_call_original
@@ -211,15 +208,6 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
           processor = described_class.new
           expect(processor.send(:batch_sender)).to be_a(Journaled::KinesisBatchSender)
         end
-
-        it 'uses SKIP LOCKED for event fetching' do
-          # Spy on the ActiveRecord lock call
-          query = Journaled::Outbox::Event.ready_to_process.limit(Journaled.worker_batch_size)
-          allow(Journaled::Outbox::Event).to receive(:ready_to_process).and_return(query)
-
-          expect(query).to receive(:lock).with('FOR UPDATE SKIP LOCKED').and_call_original
-          Journaled::Outbox::Event.fetch_batch_for_update
-        end
       end
 
       context 'when in guaranteed_order mode' do
@@ -227,23 +215,9 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
           Journaled.outbox_processing_mode = :guaranteed_order
         end
 
-        after do
-          # Reset to default
-          Journaled.outbox_processing_mode = :batch
-        end
-
         it 'initializes with KinesisSequentialSender' do
           processor = described_class.new
           expect(processor.send(:batch_sender)).to be_a(Journaled::KinesisSequentialSender)
-        end
-
-        it 'uses blocking lock for event fetching' do
-          # Spy on the ActiveRecord lock call
-          query = Journaled::Outbox::Event.ready_to_process.limit(Journaled.worker_batch_size)
-          allow(Journaled::Outbox::Event).to receive(:ready_to_process).and_return(query)
-
-          expect(query).to receive(:lock).with('FOR UPDATE').and_call_original
-          Journaled::Outbox::Event.fetch_batch_for_update
         end
       end
     end

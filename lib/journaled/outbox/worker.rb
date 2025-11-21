@@ -81,9 +81,6 @@ module Journaled
 
         instrument_batch_results(stats)
 
-        # Return count of events that are "done" (succeeded or permanently failed)
-        # Transient failures stay in the queue and will be retried, so don't count them
-        # as "processed" - this ensures the worker sleeps when only transient failures occur
         stats[:succeeded] + stats[:failed_permanently]
       end
 
