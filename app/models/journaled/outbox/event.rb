@@ -29,12 +29,20 @@ module Journaled
 
       # Fetch a batch of events for processing using SELECT FOR UPDATE
       #
+      # In :guaranteed_order mode, uses blocking lock to ensure sequential processing.
+      # In :batch mode, uses SKIP LOCKED to allow parallel workers.
+      #
       # @return [Array<Journaled::Outbox::Event>] Events locked for processing
       def self.fetch_batch_for_update
-        ready_to_process
-          .limit(Journaled.worker_batch_size)
-          .lock
-          .to_a
+        query = ready_to_process.limit(Journaled.worker_batch_size)
+
+        lock_clause = if Journaled.outbox_processing_mode == :guaranteed_order
+          'FOR UPDATE'
+        else
+          'FOR UPDATE SKIP LOCKED'
+        end
+
+        query.lock(lock_clause).to_a
       end
 
       # Requeue a failed event for processing

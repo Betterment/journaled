@@ -164,6 +164,25 @@ Journaling provides a number of different configuation options that can be set i
   Journaled.outbox_base_class_name = 'EventsRecord'
   ```
 
+#### `Journaled.outbox_processing_mode` (default: `:batch`)
+
+  **Only relevant when using `Journaled::Outbox::Adapter`.**
+
+  Controls how events are sent to Kinesis. Two modes are available:
+
+  - **`:batch`** (default) - Uses the Kinesis `put_records` batch API for high throughput. Events are sent in parallel batches, allowing multiple workers to run concurrently. Best for most use cases where strict ordering is not required.
+
+  - **`:guaranteed_order`** - Uses the Kinesis `put_record` single-event API to send events sequentially. Events are processed one at a time in order, stopping on the first transient failure to preserve ordering. Use this when you need strict ordering guarantees per partition key. Note: The current implementation requires single-threaded processing, but future optimizations may support batching and multi-threading by partition key.
+
+  Example:
+  ```ruby
+  # For high throughput (default)
+  Journaled.outbox_processing_mode = :batch
+
+  # For guaranteed ordering
+  Journaled.outbox_processing_mode = :guaranteed_order
+  ```
+
 #### ActiveJob `set` options
 
 Both model-level directives accept additional options to be passed into ActiveJob's `set` method:
@@ -181,6 +200,8 @@ journal_attributes :email, enqueue_with: { priority: 20, queue: 'journaled' }
 ##### Outbox-style Event Processing (Optional)
 
 Journaled includes a built-in Outbox-style delivery adapter with horizontally scalable workers.
+
+By default, the Outbox adapter uses the Kinesis `put_records` batch API for high-throughput event processing, allowing multiple workers to process events in parallel. If you require strict ordering guarantees per partition key, you can configure sequential processing mode (see configuration options below).
 
 **Setup:**
 
@@ -207,6 +228,16 @@ Journaled.delivery_adapter = Journaled::Outbox::Adapter
 # Optional: Customize worker behavior (these are the defaults)
 Journaled.worker_batch_size = 500        # Max events per Kinesis batch (Kinesis API limit)
 Journaled.worker_poll_interval = 5       # Seconds between polls
+
+# Optional: Configure processing mode (default: :batch)
+# - :batch - Uses Kinesis put_records batch API for high throughput (default)
+#            Events are sent in parallel batches. Multiple workers can run concurrently.
+# - :guaranteed_order - Uses Kinesis put_record single-event API for sequential processing
+#                       Events are sent one at a time in order. Use this if you need
+#                       strict ordering guarantees per partition key. The current
+#                       implementation processes events single-threaded, though future
+#                       optimizations may support batching/multi-threading by partition key.
+Journaled.outbox_processing_mode = :batch
 ```
 
 **Note:** When using the Outbox adapter, you do **not** need to configure an ActiveJob queue adapter (skip step 1 of Installation). The Outbox adapter uses the `journaled_outbox_events` table for event storage and its own worker daemons for processing, making it independent of ActiveJob. Transactional batching still works seamlessly with the Outbox adapter.
@@ -216,6 +247,8 @@ Journaled.worker_poll_interval = 5       # Seconds between polls
 ```bash
 bundle exec rake journaled_worker:work
 ```
+
+**Note:** In `:batch` mode (the default), you can run multiple worker processes concurrently for horizontal scaling. In `:guaranteed_order` mode, the current implementation is optimized for running a single worker to maintain ordering guarantees.
 
 4. **Monitoring:**
 
