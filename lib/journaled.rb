@@ -13,6 +13,7 @@ require 'journaled/delivery_adapters/active_job_adapter'
 require 'journaled/outbox/adapter'
 require 'journaled/kinesis_client_factory'
 require 'journaled/kinesis_batch_sender'
+require 'journaled/kinesis_sequential_sender'
 require 'journaled/outbox/batch_processor'
 require 'journaled/outbox/metric_emitter'
 require 'journaled/outbox/worker'
@@ -33,6 +34,7 @@ module Journaled
   # Worker configuration (for Outbox-style event processing)
   mattr_accessor(:worker_batch_size) { 1000 }
   mattr_accessor(:worker_poll_interval) { 1 } # seconds
+  mattr_accessor(:outbox_processing_mode) { :batch } # :batch or :guaranteed_order
 
   def self.transactional_batching_enabled?
     Thread.current[:journaled_transactional_batching_enabled] || @@transactional_batching_enabled

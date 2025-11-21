@@ -6,30 +6,34 @@ module Journaled
     #
     # This class handles the core business logic of:
     # - Fetching events from the database (with FOR UPDATE)
-    # - Sending them to Kinesis in batches using the put_records API
+    # - Sending them to Kinesis (batch API or sequential)
     # - Handling successful deliveries (deleting events)
     # - Handling permanent failures (marking with failed_at)
     # - Handling transient failures (leaving unlocked for retry)
     #
-    # Events are sent in batches to Kinesis for improved throughput. Transient failures
-    # (throttling, service unavailable) are left unlocked and will be retried in the next
-    # batch. Permanent failures (validation errors) are marked with failed_at.
+    # Supports two modes based on Journaled.outbox_processing_mode:
+    # - :batch - Uses put_records API for high throughput with parallel workers
+    # - :guaranteed_order - Uses put_record API for sequential processing
     #
     # All operations happen within a single database transaction for consistency.
     # The Worker class delegates to this for actual event processing.
     class BatchProcessor
       def initialize
-        @batch_sender = KinesisBatchSender.new
+        @batch_sender = if Journaled.outbox_processing_mode == :guaranteed_order
+          KinesisSequentialSender.new
+        else
+          KinesisBatchSender.new
+        end
       end
 
       # Process a single batch of events
       #
       # Wraps the entire batch processing in a single transaction:
       # 1. SELECT FOR UPDATE (claim events)
-      # 2. Send to Kinesis using batch API
+      # 2. Send to Kinesis (batch API or sequential, based on mode)
       # 3. Delete successful events
       # 4. Mark permanently failed events
-      # 5. Leave transient failures untouched (will be retried in next batch)
+      # 5. Leave transient failures untouched (will be retried)
       #
       # @return [Hash] Statistics with :succeeded, :failed_permanently, :failed_transiently counts
       def process_batch
