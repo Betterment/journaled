@@ -193,7 +193,7 @@ RSpec.describe Journaled::Outbox::Worker do
     end
 
     context 'when no events are processed' do
-      let(:stats) { { succeeded: 0, failed_permanently: 0 } }
+      let(:stats) { { succeeded: 0, failed_permanently: 0, failed_transiently: 0 } }
 
       it 'emits notifications with zero counts' do
         emitted = {}
@@ -205,12 +205,13 @@ RSpec.describe Journaled::Outbox::Worker do
 
         expect(emitted['journaled.worker.batch_process']).to include(value: 0, worker_id: be_present)
         expect(emitted['journaled.worker.batch_sent']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
       end
     end
 
     context 'when events succeed' do
-      let(:stats) { { succeeded: 2, failed_permanently: 0 } }
+      let(:stats) { { succeeded: 2, failed_permanently: 0, failed_transiently: 0 } }
 
       it 'emits batch_process and batch_sent notifications with worker_id' do
         emitted = {}
@@ -222,14 +223,15 @@ RSpec.describe Journaled::Outbox::Worker do
 
         expect(emitted['journaled.worker.batch_process']).to include(value: 2, worker_id: be_present)
         expect(emitted['journaled.worker.batch_sent']).to include(value: 2, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
       end
     end
 
     context 'when events fail permanently' do
-      let(:stats) { { succeeded: 1, failed_permanently: 2 } }
+      let(:stats) { { succeeded: 1, failed_permanently: 2, failed_transiently: 0 } }
 
-      it 'emits batch_process, batch_sent, and batch_failed notifications' do
+      it 'emits batch_process, batch_sent, and batch_failed_permanently notifications' do
         emitted = {}
         callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
 
@@ -239,7 +241,26 @@ RSpec.describe Journaled::Outbox::Worker do
 
         expect(emitted['journaled.worker.batch_process']).to include(value: 3, worker_id: be_present)
         expect(emitted['journaled.worker.batch_sent']).to include(value: 1, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed']).to include(value: 2, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 2, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
+      end
+    end
+
+    context 'when events fail transiently' do
+      let(:stats) { { succeeded: 1, failed_permanently: 0, failed_transiently: 3 } }
+
+      it 'emits batch_process, batch_sent, and batch_failed_transiently notifications' do
+        emitted = {}
+        callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
+
+        ActiveSupport::Notifications.subscribed(callback, /^journaled\.worker\./) do
+          worker.start
+        end
+
+        expect(emitted['journaled.worker.batch_process']).to include(value: 4, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_sent']).to include(value: 1, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 3, worker_id: be_present)
       end
     end
   end

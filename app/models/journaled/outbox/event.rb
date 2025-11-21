@@ -33,7 +33,7 @@ module Journaled
       def self.fetch_batch_for_update
         ready_to_process
           .limit(Journaled.worker_batch_size)
-          .lock
+          .lock('FOR UPDATE SKIP LOCKED')
           .to_a
       end
 

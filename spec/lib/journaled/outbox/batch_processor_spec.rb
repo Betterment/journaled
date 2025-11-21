@@ -23,7 +23,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
 
       it 'returns zero counts' do
         result = processor.process_batch
-        expect(result).to eq(succeeded: 0, failed_permanently: 0)
+        expect(result).to eq(succeeded: 0, failed_permanently: 0, failed_transiently: 0)
       end
 
       it 'sends empty batch to batch sender' do
@@ -61,30 +61,44 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
 
         it 'returns correct stats' do
           result = processor.process_batch
-          expect(result).to eq(succeeded: 2, failed_permanently: 0)
+          expect(result).to eq(succeeded: 2, failed_permanently: 0, failed_transiently: 0)
         end
       end
 
       context 'with transient failures' do
         let!(:event_1) { create_database_event }
         let!(:event_2) { create_database_event }
-
-        before do
-          allow(batch_sender).to receive(:send_batch).with(events).and_return(
-            succeeded: [],
-            failed: [],
+        let(:transient_failure) do
+          Journaled::KinesisBatchSender::FailedEvent.new(
+            event: event_1,
+            error_code: 'ProvisionedThroughputExceededException',
+            error_message: 'Rate exceeded',
+            transient: true,
           )
         end
 
-        it 'stops processing and leaves the failed event in the queue' do
+        before do
+          allow(batch_sender).to receive(:send_batch).with(events).and_return(
+            succeeded: [event_2],
+            failed: [transient_failure],
+          )
+        end
+
+        it 'leaves the transiently failed event in the queue (not marked as failed)' do
           processor.process_batch
+          event_1.reload
+          expect(event_1.failed_at).to be_nil
           expect(Journaled::Outbox::Event.exists?(event_1.id)).to be true
-          expect(Journaled::Outbox::Event.exists?(event_2.id)).to be true
+        end
+
+        it 'processes successful events' do
+          processor.process_batch
+          expect(Journaled::Outbox::Event.exists?(event_2.id)).to be false
         end
 
         it 'returns correct stats' do
           result = processor.process_batch
-          expect(result).to eq(succeeded: 0, failed_permanently: 0)
+          expect(result).to eq(succeeded: 1, failed_permanently: 0, failed_transiently: 1)
         end
       end
 
@@ -121,7 +135,7 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
 
         it 'returns correct stats' do
           result = processor.process_batch
-          expect(result).to eq(succeeded: 1, failed_permanently: 1)
+          expect(result).to eq(succeeded: 1, failed_permanently: 1, failed_transiently: 0)
         end
       end
 
@@ -138,11 +152,19 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
             transient: false,
           )
         end
+        let(:transient_failure) do
+          Journaled::KinesisBatchSender::FailedEvent.new(
+            event: event_2,
+            error_code: 'ProvisionedThroughputExceededException',
+            error_message: 'Rate exceeded',
+            transient: true,
+          )
+        end
 
         before do
           allow(batch_sender).to receive(:send_batch).with([event_1, event_2, event_3]).and_return(
-            succeeded: [],
-            failed: [permanent_failure],
+            succeeded: [event_3],
+            failed: [permanent_failure, transient_failure],
           )
         end
 
@@ -159,9 +181,14 @@ RSpec.describe Journaled::Outbox::BatchProcessor do
           expect(event_2.failed_at).to be_nil
         end
 
+        it 'processes successful event' do
+          processor.process_batch
+          expect(Journaled::Outbox::Event.exists?(event_3.id)).to be false
+        end
+
         it 'returns correct stats' do
           result = processor.process_batch
-          expect(result).to eq(succeeded: 0, failed_permanently: 1)
+          expect(result).to eq(succeeded: 1, failed_permanently: 1, failed_transiently: 1)
         end
       end
     end

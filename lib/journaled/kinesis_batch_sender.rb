@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module Journaled
-  # Sends batches of events to Kinesis using the PutRecord single-event API
+  # Sends batches of events to Kinesis using the PutRecords batch API
   #
   # This class handles:
-  # - Sending events individually to support guaranteed ordering
+  # - Sending events in batches to improve throughput
   # - Handling failures on a per-event basis
   # - Classifying errors as transient vs permanent
   #
@@ -20,79 +20,109 @@ module Journaled
       end
     end
 
-    PERMANENT_ERROR_CLASSES = [
-      Aws::Kinesis::Errors::ValidationException,
+    # Per-record error codes that indicate permanent failures (bad event data)
+    PERMANENT_ERROR_CODES = [
+      'ValidationException',
     ].freeze
 
     # Send a batch of database events to Kinesis
     #
-    # Sends events one at a time to guarantee ordering. Stops on first transient failure.
+    # Uses put_records batch API. Groups events by stream and sends each group as a batch.
     #
     # @param events [Array<Journaled::Outbox::Event>] Events to send
     # @return [Hash] Result with:
     #   - succeeded: Array of successfully sent events
-    #   - failed: Array of FailedEvent structs (only permanent failures)
+    #   - failed: Array of FailedEvent structs (both transient and permanent failures)
     def send_batch(events)
-      result = { succeeded: [], failed: [] }
-
-      events.each do |event|
-        event_result = send_event(event)
-        if event_result.is_a?(FailedEvent)
-          if event_result.transient?
-            emit_transient_failure_metric
-            break
-          else
-            result[:failed] << event_result
-          end
-        else
-          result[:succeeded] << event_result
-        end
+      # Group events by stream since put_records requires all records to go to the same stream
+      events.group_by(&:stream_name).each_with_object({ succeeded: [], failed: [] }) do |(stream_name, stream_events), result|
+        batch_result = send_stream_batch(stream_name, stream_events)
+        result[:succeeded].concat(batch_result[:succeeded])
+        result[:failed].concat(batch_result[:failed])
       end
-
-      result
     end
 
     private
 
-    # Send a single event to Kinesis
-    #
-    # @param event [Journaled::Outbox::Event] Event to send
-    # @return [Journaled::Outbox::Event, FailedEvent] The event on success, or FailedEvent on failure
-    def send_event(event)
-      # Merge the DB-generated ID into the event data before sending to Kinesis
-      event_data_with_id = event.event_data.merge(id: event.id)
+    def send_stream_batch(stream_name, stream_events)
+      records = build_records(stream_events)
 
-      kinesis_client.put_record(
-        stream_name: event.stream_name,
-        data: event_data_with_id.to_json,
-        partition_key: event.partition_key,
+      begin
+        response = kinesis_client.put_records(stream_name:, records:)
+        process_response(response, stream_events)
+      rescue Aws::Kinesis::Errors::ValidationException
+        # Re-raise batch-level validation errors (configuration issues)
+        # These indicate invalid stream name, batch too large, etc.
+        # Not event data problems - requires manual intervention
+        raise
+      rescue StandardError => e
+        # Handle transient errors (throttling, network issues, service unavailable)
+        handle_transient_batch_error(e, stream_events)
+      end
+    end
+
+    def build_records(stream_events)
+      stream_events.map do |event|
+        {
+          data: event.event_data.merge(id: event.id).to_json,
+          partition_key: event.partition_key,
+        }
+      end
+    end
+
+    def process_response(response, stream_events)
+      succeeded = []
+      failed = []
+
+      response.records.each_with_index do |record_result, index|
+        event = stream_events[index]
+
+        if record_result.error_code
+          failed << create_failed_event(event, record_result)
+        else
+          succeeded << event
+        end
+      end
+
+      { succeeded:, failed: }
+    end
+
+    def create_failed_event(event, record_result)
+      failed_event = FailedEvent.new(
+        event:,
+        error_code: record_result.error_code,
+        error_message: record_result.error_message,
+        transient: PERMANENT_ERROR_CODES.exclude?(record_result.error_code),
       )
 
-      event
-    rescue *PERMANENT_ERROR_CLASSES => e
-      Rails.logger.error("Kinesis event send failed (permanent): #{e.class} - #{e.message}")
-      FailedEvent.new(
-        event:,
-        error_code: e.class.to_s,
-        error_message: e.message,
-        transient: false,
+      log_failure(failed_event)
+      failed_event
+    end
+
+    def log_failure(failed_event)
+      severity = failed_event.transient? ? 'transient' : 'permanent'
+      Rails.logger.error(
+        "Kinesis event send failed (#{severity}): #{failed_event.error_code} - #{failed_event.error_message}",
       )
-    rescue StandardError => e
-      Rails.logger.error("Kinesis event send failed (transient): #{e.class} - #{e.message}")
-      FailedEvent.new(
-        event:,
-        error_code: e.class.to_s,
-        error_message: e.message,
-        transient: true,
-      )
+    end
+
+    def handle_transient_batch_error(error, stream_events)
+      Rails.logger.error("Kinesis batch send failed (transient): #{error.class} - #{error.message}")
+
+      failed = stream_events.map do |event|
+        FailedEvent.new(
+          event:,
+          error_code: error.class.to_s,
+          error_message: error.message,
+          transient: true,
+        )
+      end
+
+      { succeeded: [], failed: }
     end
 
     def kinesis_client
       @kinesis_client ||= KinesisClientFactory.build
-    end
-
-    def emit_transient_failure_metric
-      ActiveSupport::Notifications.instrument('journaled.kinesis_batch_sender.transient_failure')
     end
   end
 end

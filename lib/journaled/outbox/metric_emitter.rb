@@ -12,13 +12,14 @@ module Journaled
 
       # Emit batch processing metrics
       #
-      # @param stats [Hash] Processing statistics with :succeeded, :failed_permanently
+      # @param stats [Hash] Processing statistics with :succeeded, :failed_permanently, :failed_transiently
       def emit_batch_metrics(stats)
-        total_events = stats[:succeeded] + stats[:failed_permanently]
+        total_events = stats[:succeeded] + stats[:failed_permanently] + stats[:failed_transiently]
 
         emit_metric('journaled.worker.batch_process', value: total_events)
         emit_metric('journaled.worker.batch_sent', value: stats[:succeeded])
-        emit_metric('journaled.worker.batch_failed', value: stats[:failed_permanently])
+        emit_metric('journaled.worker.batch_failed_permanently', value: stats[:failed_permanently])
+        emit_metric('journaled.worker.batch_failed_transiently', value: stats[:failed_transiently])
       end
 
       # Collect and emit queue metrics
