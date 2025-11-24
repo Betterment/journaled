@@ -6,31 +6,36 @@ module Journaled
     #
     # This class handles the core business logic of:
     # - Fetching events from the database (with FOR UPDATE)
-    # - Sending them to Kinesis one at a time to guarantee ordering
+    # - Sending them to Kinesis (batch API or sequential)
     # - Handling successful deliveries (deleting events)
     # - Handling permanent failures (marking with failed_at)
-    # - Handling ephemeral failures (stopping processing and committing)
+    # - Handling transient failures (leaving unlocked for retry)
     #
-    # Events are processed one at a time to guarantee ordering. If an event fails
-    # with an ephemeral error, processing stops and the transaction commits
-    # (deleting successes and marking permanent failures), then the loop re-enters.
+    # Supports two modes based on Journaled.outbox_processing_mode:
+    # - :batch - Uses put_records API for high throughput with parallel workers
+    # - :guaranteed_order - Uses put_record API for sequential processing
     #
     # All operations happen within a single database transaction for consistency.
     # The Worker class delegates to this for actual event processing.
     class BatchProcessor
       def initialize
-        @batch_sender = KinesisBatchSender.new
+        @batch_sender = if Journaled.outbox_processing_mode == :guaranteed_order
+          KinesisSequentialSender.new
+        else
+          KinesisBatchSender.new
+        end
       end
 
       # Process a single batch of events
       #
       # Wraps the entire batch processing in a single transaction:
       # 1. SELECT FOR UPDATE (claim events)
-      # 2. Send to Kinesis (batch sender handles one-at-a-time and short-circuiting)
+      # 2. Send to Kinesis (batch API or sequential, based on mode)
       # 3. Delete successful events
-      # 4. Mark failed events (batch sender only returns permanent failures)
+      # 4. Mark permanently failed events
+      # 5. Leave transient failures untouched (will be retried)
       #
-      # @return [Hash] Statistics with :succeeded, :failed_permanently counts
+      # @return [Hash] Statistics with :succeeded, :failed_permanently, :failed_transiently counts
       def process_batch
         ActiveRecord::Base.transaction do
           events = Event.fetch_batch_for_update
@@ -38,20 +43,24 @@ module Journaled
 
           result = batch_sender.send_batch(events)
 
-          # Delete successful events
           Event.where(id: result[:succeeded].map(&:id)).delete_all if result[:succeeded].any?
 
-          # Mark failed events
-          mark_events_as_failed(result[:failed]) if result[:failed].any?
+          permanent_failures = result[:failed].select(&:permanent?)
+          transient_failures = result[:failed].select(&:transient?)
+
+          mark_events_as_failed(permanent_failures) if permanent_failures.any?
 
           Rails.logger.info(
             "[journaled] Batch complete: #{result[:succeeded].count} succeeded, " \
-            "#{result[:failed].count} marked as failed (batch size: #{events.count})",
+            "#{permanent_failures.count} permanently failed, " \
+            "#{transient_failures.count} transiently failed (will retry) " \
+            "(batch size: #{events.count})",
           )
 
           {
             succeeded: result[:succeeded].count,
-            failed_permanently: result[:failed].count,
+            failed_permanently: permanent_failures.count,
+            failed_transiently: transient_failures.count,
           }
         end
       end
