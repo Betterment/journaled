@@ -60,9 +60,8 @@ module Journaled
             break
           end
 
-          events_processed = 0
           begin
-            events_processed = process_batch
+            process_batch
             emit_metrics_if_needed
           rescue StandardError => e
             Rails.logger.error("Worker error: #{e.class} - #{e.message}")
@@ -71,20 +70,13 @@ module Journaled
 
           break if shutdown_requested
 
-          # Only sleep if no events were processed to prevent excessive polling on empty table
-          sleep(Journaled.worker_poll_interval) if events_processed.zero?
+          sleep(Journaled.worker_poll_interval)
         end
       end
 
       def process_batch
         stats = processor.process_batch
 
-        instrument_batch_results(stats)
-
-        stats[:succeeded] + stats[:failed_permanently]
-      end
-
-      def instrument_batch_results(stats)
         metric_emitter.emit_batch_metrics(stats)
       end
 

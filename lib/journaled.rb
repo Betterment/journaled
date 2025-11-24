@@ -34,7 +34,7 @@ module Journaled
 
   # Worker configuration (for Outbox-style event processing)
   mattr_accessor(:worker_batch_size) { 500 }
-  mattr_accessor(:worker_poll_interval) { 1 } # seconds
+  mattr_accessor(:worker_poll_interval) { 0.5 } # seconds
   mattr_accessor(:outbox_processing_mode) { :batch } # :batch or :guaranteed_order
 
   def self.transactional_batching_enabled?
