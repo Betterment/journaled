@@ -199,14 +199,14 @@ RSpec.describe Journaled::Outbox::Worker do
         emitted = {}
         callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
 
-        ActiveSupport::Notifications.subscribed(callback, /^journaled\.worker\./) do
+        ActiveSupport::Notifications.subscribed(callback, /^journaled\.outbox_event\./) do
           worker.start
         end
 
-        expect(emitted['journaled.worker.batch_process']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_sent']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.processed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.sent']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.failed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.errored']).to include(value: 0, worker_id: be_present)
       end
     end
 
@@ -217,14 +217,14 @@ RSpec.describe Journaled::Outbox::Worker do
         emitted = {}
         callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
 
-        ActiveSupport::Notifications.subscribed(callback, /^journaled\.worker\./) do
+        ActiveSupport::Notifications.subscribed(callback, /^journaled\.outbox_event\./) do
           worker.start
         end
 
-        expect(emitted['journaled.worker.batch_process']).to include(value: 2, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_sent']).to include(value: 2, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.processed']).to include(value: 2, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.sent']).to include(value: 2, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.failed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.errored']).to include(value: 0, worker_id: be_present)
       end
     end
 
@@ -235,14 +235,14 @@ RSpec.describe Journaled::Outbox::Worker do
         emitted = {}
         callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
 
-        ActiveSupport::Notifications.subscribed(callback, /^journaled\.worker\./) do
+        ActiveSupport::Notifications.subscribed(callback, /^journaled\.outbox_event\./) do
           worker.start
         end
 
-        expect(emitted['journaled.worker.batch_process']).to include(value: 3, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_sent']).to include(value: 1, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 2, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.processed']).to include(value: 3, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.sent']).to include(value: 1, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.failed']).to include(value: 2, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.errored']).to include(value: 0, worker_id: be_present)
       end
     end
 
@@ -253,14 +253,14 @@ RSpec.describe Journaled::Outbox::Worker do
         emitted = {}
         callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
 
-        ActiveSupport::Notifications.subscribed(callback, /^journaled\.worker\./) do
+        ActiveSupport::Notifications.subscribed(callback, /^journaled\.outbox_event\./) do
           worker.start
         end
 
-        expect(emitted['journaled.worker.batch_process']).to include(value: 4, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_sent']).to include(value: 1, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_permanently']).to include(value: 0, worker_id: be_present)
-        expect(emitted['journaled.worker.batch_failed_transiently']).to include(value: 3, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.processed']).to include(value: 4, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.sent']).to include(value: 1, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.failed']).to include(value: 0, worker_id: be_present)
+        expect(emitted['journaled.outbox_event.errored']).to include(value: 3, worker_id: be_present)
       end
     end
   end
@@ -368,7 +368,7 @@ RSpec.describe Journaled::Outbox::Worker do
         # Verify each individual metric was emitted
         expect(emitted).to have_key('journaled.worker.queue_total_count')
         expect(emitted).to have_key('journaled.worker.queue_workable_count')
-        expect(emitted).to have_key('journaled.worker.queue_erroring_count')
+        expect(emitted).to have_key('journaled.worker.queue_failed_count')
         expect(emitted).to have_key('journaled.worker.queue_oldest_age_seconds')
 
         # Verify each metric has worker_id and a value
@@ -380,7 +380,7 @@ RSpec.describe Journaled::Outbox::Worker do
           worker_id: be_present,
           value: be >= 0,
         )
-        expect(emitted['journaled.worker.queue_erroring_count']).to include(
+        expect(emitted['journaled.worker.queue_failed_count']).to include(
           worker_id: be_present,
           value: be >= 0,
         )
@@ -469,10 +469,10 @@ RSpec.describe Journaled::Outbox::Worker do
 
           # Wait for background thread to complete
           timeout = 2.seconds.from_now
-          sleep 0.1 until emitted.key?('journaled.worker.queue_erroring_count') || Time.current > timeout
+          sleep 0.1 until emitted.key?('journaled.worker.queue_failed_count') || Time.current > timeout
         end
 
-        expect(emitted['journaled.worker.queue_erroring_count'][:value]).to eq(1) # Only events with error but not failed
+        expect(emitted['journaled.worker.queue_failed_count'][:value]).to eq(1) # Only events with error but not failed
       end
     end
   end

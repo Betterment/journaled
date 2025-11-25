@@ -18,7 +18,6 @@ module Journaled
         @worker_id = "#{Socket.gethostname}-#{Process.pid}"
         self.running = false
         @processor = BatchProcessor.new
-        @metric_emitter = MetricEmitter.new(worker_id: @worker_id)
         self.shutdown_requested = false
         @last_metrics_emission = Time.current
       end
@@ -50,7 +49,7 @@ module Journaled
 
       private
 
-      attr_reader :worker_id, :processor, :metric_emitter
+      attr_reader :worker_id, :processor
       attr_accessor :shutdown_requested, :running, :last_metrics_emission
 
       def run_loop
@@ -77,7 +76,7 @@ module Journaled
       def process_batch
         stats = processor.process_batch
 
-        metric_emitter.emit_batch_metrics(stats)
+        MetricEmitter.emit_batch_metrics(stats, worker_id:)
       end
 
       def check_prerequisites!
@@ -120,7 +119,7 @@ module Journaled
 
       # Collect and emit queue metrics
       def collect_and_emit_metrics
-        metric_emitter.emit_queue_metrics
+        MetricEmitter.emit_queue_metrics(worker_id:)
       end
     end
   end
