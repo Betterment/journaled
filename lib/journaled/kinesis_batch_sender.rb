@@ -78,6 +78,8 @@ module Journaled
     end
 
     def create_failed_event(event, record_result)
+      Outbox::MetricEmitter.emit_kinesis_failure(event:, error_code: record_result.error_code)
+
       Journaled::KinesisFailedEvent.new(
         event:,
         error_code: record_result.error_code,
@@ -90,9 +92,12 @@ module Journaled
       Rails.logger.error("Kinesis batch send failed (transient): #{error.class} - #{error.message}")
 
       failed = stream_events.map do |event|
+        error_code = error.class.to_s
+        Outbox::MetricEmitter.emit_kinesis_failure(event:, error_code:)
+
         Journaled::KinesisFailedEvent.new(
           event:,
-          error_code: error.class.to_s,
+          error_code:,
           error_message: error.message,
           transient: true,
         )

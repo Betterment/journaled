@@ -58,17 +58,23 @@ module Journaled
       event
     rescue *PERMANENT_ERROR_CLASSES => e
       Rails.logger.error("[Journaled] Kinesis event send failed (permanent): #{e.class} - #{e.message}")
+      error_code = e.class.to_s
+      Outbox::MetricEmitter.emit_kinesis_failure(event:, error_code:)
+
       Journaled::KinesisFailedEvent.new(
         event:,
-        error_code: e.class.to_s,
+        error_code:,
         error_message: e.message,
         transient: false,
       )
     rescue StandardError => e
       Rails.logger.error("[Journaled] Kinesis event send failed (transient): #{e.class} - #{e.message}")
+      error_code = e.class.to_s
+      Outbox::MetricEmitter.emit_kinesis_failure(event:, error_code:)
+
       Journaled::KinesisFailedEvent.new(
         event:,
-        error_code: e.class.to_s,
+        error_code:,
         error_message: e.message,
         transient: true,
       )
