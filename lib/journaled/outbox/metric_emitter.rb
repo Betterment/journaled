@@ -14,10 +14,10 @@ module Journaled
         def emit_batch_metrics(stats, worker_id:)
           total_events = stats[:succeeded] + stats[:failed_permanently] + stats[:failed_transiently]
 
-          emit_metric('journaled.worker.batch_process', value: total_events, worker_id:)
-          emit_metric('journaled.worker.batch_sent', value: stats[:succeeded], worker_id:)
-          emit_metric('journaled.worker.batch_failed_permanently', value: stats[:failed_permanently], worker_id:)
-          emit_metric('journaled.worker.batch_failed_transiently', value: stats[:failed_transiently], worker_id:)
+          emit_metric('journaled.outbox_event.processed', value: total_events, worker_id:)
+          emit_metric('journaled.outbox_event.sent', value: stats[:succeeded], worker_id:)
+          emit_metric('journaled.outbox_event.failed', value: stats[:failed_permanently], worker_id:)
+          emit_metric('journaled.outbox_event.errored', value: stats[:failed_transiently], worker_id:)
         end
 
         # Collect and emit queue metrics
@@ -29,13 +29,13 @@ module Journaled
 
           emit_metric('journaled.worker.queue_total_count', value: metrics[:total_count], worker_id:)
           emit_metric('journaled.worker.queue_workable_count', value: metrics[:workable_count], worker_id:)
-          emit_metric('journaled.worker.queue_erroring_count', value: metrics[:erroring_count], worker_id:)
+          emit_metric('journaled.worker.queue_failed_count', value: metrics[:failed_count], worker_id:)
           emit_metric('journaled.worker.queue_oldest_age_seconds', value: metrics[:oldest_age_seconds], worker_id:)
 
           Rails.logger.info(
             "Queue metrics: total=#{metrics[:total_count]}, " \
             "workable=#{metrics[:workable_count]}, " \
-            "erroring=#{metrics[:erroring_count]}, " \
+            "failed=#{metrics[:failed_count]}, " \
             "oldest_age=#{metrics[:oldest_age_seconds].round(2)}s",
           )
         end
@@ -73,7 +73,7 @@ module Journaled
             Event.select(
               'COUNT(*) AS total_count',
               'COUNT(*) FILTER (WHERE failed_at IS NULL) AS workable_count',
-              'COUNT(*) FILTER (WHERE failure_reason IS NOT NULL AND failed_at IS NULL) AS erroring_count',
+              'COUNT(*) FILTER (WHERE failure_reason IS NOT NULL AND failed_at IS NULL) AS failed_count',
               'MIN(created_at) FILTER (WHERE failed_at IS NULL) AS oldest_non_failed_timestamp',
             ).to_sql,
           )
@@ -84,7 +84,7 @@ module Journaled
           {
             total_count: result['total_count'],
             workable_count: result['workable_count'],
-            erroring_count: result['erroring_count'],
+            failed_count: result['failed_count'],
             oldest_age_seconds:,
           }
         end
