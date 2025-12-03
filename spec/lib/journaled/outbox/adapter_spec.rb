@@ -81,7 +81,28 @@ RSpec.describe Journaled::Outbox::Adapter do
   end
 
   describe '.deliver' do
+    context 'when Journaled is disabled' do
+      before do
+        allow(Journaled).to receive(:enabled?).and_return(false)
+      end
+
+      it 'does not persist any events' do
+        expect {
+          described_class.deliver(events:, enqueue_opts:)
+        }.not_to change { Journaled::Outbox::Event.count }
+      end
+
+      it 'does not check for table existence' do
+        expect(described_class).not_to receive(:check_table_exists!)
+        described_class.deliver(events:, enqueue_opts:)
+      end
+    end
+
     context 'when tables exist' do
+      before do
+        allow(Journaled).to receive(:enabled?).and_return(true)
+      end
+
       it 'creates database event records' do
         expect {
           described_class.deliver(events:, enqueue_opts:)
@@ -119,6 +140,7 @@ RSpec.describe Journaled::Outbox::Adapter do
 
     context 'when tables do not exist' do
       before do
+        allow(Journaled).to receive(:enabled?).and_return(true)
         allow(Journaled::Outbox::Event).to receive(:table_exists?).and_return(false)
       end
 

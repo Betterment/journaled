@@ -503,6 +503,7 @@ RSpec.describe Journaled::Writer do
     context 'with Outbox::Adapter' do
       before do
         skip "Outbox tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+        allow(Journaled).to receive(:enabled?).and_return(true)
       end
 
       around do |example|
