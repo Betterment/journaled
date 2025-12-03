@@ -21,6 +21,8 @@ module Journaled
       # @param ** [Hash] Additional options (ignored, for interface compatibility)
       # @return [void]
       def self.deliver(events:, **)
+        return unless Journaled.enabled?
+
         check_table_exists!
 
         records = events.map do |event|
