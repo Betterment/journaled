@@ -19,6 +19,7 @@ module Journaled
       attribute :event_data, :json
 
       validates :event_type, :event_data, :partition_key, :stream_name, presence: true
+      validate :failed_at_and_failure_reason_must_be_consistent
 
       scope :ready_to_process, -> {
         where(failed_at: nil)
@@ -62,6 +63,14 @@ module Journaled
       # @return [Time, nil] The timestamp of the oldest event, or nil if no events exist
       def self.oldest_non_failed_timestamp
         ready_to_process.order(:id).limit(1).pick(:created_at)
+      end
+
+      private
+
+      def failed_at_and_failure_reason_must_be_consistent
+        if failed_at.present? != failure_reason.present?
+          errors.add(:base, 'failed_at and failure_reason must both be present or both be absent')
+        end
       end
     end
   end

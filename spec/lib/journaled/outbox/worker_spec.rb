@@ -341,6 +341,7 @@ RSpec.describe Journaled::Outbox::Worker do
           partition_key: 'key2',
           stream_name: 'test_stream',
           failure_reason: 'Some error',
+          failed_at: Time.current,
         )
 
         # Start worker, then travel forward in time
@@ -405,6 +406,7 @@ RSpec.describe Journaled::Outbox::Worker do
           event_data: { test: 'data' },
           partition_key: 'key2',
           stream_name: 'test_stream',
+          failure_reason: 'Some error',
           failed_at: Time.current,
         )
 
@@ -433,13 +435,12 @@ RSpec.describe Journaled::Outbox::Worker do
         expect(emitted['journaled.worker.queue_workable_count'][:value]).to eq(1) # Only non-failed events
       end
 
-      it 'counts erroring events correctly' do
+      it 'counts failed events correctly' do
         Journaled::Outbox::Event.create!(
           event_type: 'test_event',
           event_data: { test: 'data' },
           partition_key: 'key1',
           stream_name: 'test_stream',
-          failure_reason: 'Error but not failed',
         )
 
         Journaled::Outbox::Event.create!(
@@ -447,7 +448,7 @@ RSpec.describe Journaled::Outbox::Worker do
           event_data: { test: 'data' },
           partition_key: 'key2',
           stream_name: 'test_stream',
-          failure_reason: 'Error and failed',
+          failure_reason: 'Permanent failure',
           failed_at: Time.current,
         )
 
@@ -472,7 +473,7 @@ RSpec.describe Journaled::Outbox::Worker do
           sleep 0.1 until emitted.key?('journaled.worker.queue_failed_count') || Time.current > timeout
         end
 
-        expect(emitted['journaled.worker.queue_failed_count'][:value]).to eq(1) # Only events with error but not failed
+        expect(emitted['journaled.worker.queue_failed_count'][:value]).to eq(1)
       end
     end
   end
