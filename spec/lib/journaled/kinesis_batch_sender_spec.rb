@@ -154,7 +154,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       it 'splits the batch and sends each half separately' do
         result = subject.send_batch(events)
 
-        expect(result[:succeeded]).to match_array([event_1, event_2])
+        expect(result[:succeeded]).to contain_exactly(event_1, event_2)
         expect(result[:failed]).to be_empty
         # 1 failed call + 2 successful half-batch calls
         expect(kinesis_client).to have_received(:put_records).exactly(3).times
