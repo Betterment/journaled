@@ -15,6 +15,8 @@ module Journaled
       'ValidationException',
     ].freeze
 
+    BATCH_TOO_LARGE_PATTERN = /too large/i
+
     # Send a batch of database events to Kinesis
     #
     # Uses put_records batch API. Groups events by stream and sends each group as a batch.
@@ -40,11 +42,10 @@ module Journaled
       begin
         response = kinesis_client.put_records(stream_name:, records:)
         process_response(response, stream_events)
-      rescue Aws::Kinesis::Errors::ValidationException
-        # Re-raise batch-level validation errors (configuration issues)
-        # These indicate invalid stream name, batch too large, etc.
-        # Not event data problems - requires manual intervention
-        raise
+      rescue Aws::Kinesis::Errors::ValidationException => e
+        raise unless e.message.match?(BATCH_TOO_LARGE_PATTERN)
+
+        handle_batch_too_large(stream_name, stream_events)
       rescue StandardError => e
         # Handle transient errors (throttling, network issues, service unavailable)
         handle_transient_batch_error(e, stream_events)
@@ -91,6 +92,36 @@ module Journaled
         error_message:,
         transient:,
       )
+    end
+
+    def handle_batch_too_large(stream_name, stream_events)
+      if stream_events.size <= 1
+        # Single event exceeds payload limit — treat as permanent failure
+        return {
+          succeeded: [],
+          failed: stream_events.map do |event|
+            create_failed_event(
+              event,
+              error_code: 'ValidationException',
+              error_message: 'Record exceeds Kinesis payload limit',
+              transient: false,
+            )
+          end,
+        }
+      end
+
+      Rails.logger.warn(
+        "[journaled] Batch too large for Kinesis (#{stream_events.size} events), splitting in half and retrying",
+      )
+
+      mid = stream_events.size / 2
+      first_half = send_stream_batch(stream_name, stream_events[...mid])
+      second_half = send_stream_batch(stream_name, stream_events[mid...])
+
+      {
+        succeeded: first_half[:succeeded] + second_half[:succeeded],
+        failed: first_half[:failed] + second_half[:failed],
+      }
     end
 
     def handle_transient_batch_error(error, stream_events)

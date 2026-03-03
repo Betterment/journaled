@@ -125,6 +125,75 @@ RSpec.describe Journaled::KinesisBatchSender do
       end
     end
 
+    context 'when batch exceeds total payload limit' do
+      before do
+        skip "Database event tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+      end
+
+      let(:large_data) { { event_type: 'test', payload: 'x' * 3_000_000 } }
+      let(:event_1) { create_database_event(stream_name: 'stream1', event_data: large_data) }
+      let(:event_2) { create_database_event(stream_name: 'stream1', event_data: large_data) }
+      let(:events) { [event_1, event_2] }
+
+      before do
+        allow(Rails.logger).to receive(:warn)
+
+        call_count = 0
+        allow(kinesis_client).to receive(:put_records) do |args|
+          call_count += 1
+          if call_count == 1
+            raise Aws::Kinesis::Errors::ValidationException.new(nil, 'Request Payload is too large')
+          end
+
+          mock_put_records_response(
+            args[:records].map { { error_code: nil, error_message: nil } },
+          )
+        end
+      end
+
+      it 'splits the batch and sends each half separately' do
+        result = subject.send_batch(events)
+
+        expect(result[:succeeded]).to match_array([event_1, event_2])
+        expect(result[:failed]).to be_empty
+        # 1 failed call + 2 successful half-batch calls
+        expect(kinesis_client).to have_received(:put_records).exactly(3).times
+      end
+
+      it 'logs a warning about the split' do
+        subject.send_batch(events)
+
+        expect(Rails.logger).to have_received(:warn).with(/Batch too large.*splitting in half/)
+      end
+    end
+
+    context 'when a single event exceeds the payload limit' do
+      before do
+        skip "Database event tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
+      end
+
+      let(:event) { create_database_event(stream_name: 'stream1') }
+      let(:events) { [event] }
+
+      before do
+        allow(kinesis_client).to receive(:put_records)
+          .and_raise(Aws::Kinesis::Errors::ValidationException.new(nil, 'Request Payload is too large'))
+      end
+
+      it 'marks the event as a permanent failure' do
+        result = subject.send_batch(events)
+
+        expect(result[:succeeded]).to be_empty
+        expect(result[:failed].length).to eq(1)
+
+        failure = result[:failed].first
+        expect(failure.event).to eq(event)
+        expect(failure.error_code).to eq('ValidationException')
+        expect(failure.error_message).to eq('Record exceeds Kinesis payload limit')
+        expect(failure.permanent?).to be true
+      end
+    end
+
     context 'with permanent error' do
       before do
         skip "Database event tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
