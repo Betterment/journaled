@@ -66,6 +66,7 @@ RSpec.describe Journaled::Outbox::Event do
         partition_key: 'key1',
         stream_name: 'test_stream',
         failed_at: Time.current,
+        failure_reason: 'Some error',
       )
 
       # Create a non-failed event

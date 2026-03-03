@@ -73,7 +73,7 @@ module Journaled
             Event.select(
               'COUNT(*) AS total_count',
               'COUNT(*) FILTER (WHERE failed_at IS NULL) AS workable_count',
-              'COUNT(*) FILTER (WHERE failure_reason IS NOT NULL AND failed_at IS NULL) AS failed_count',
+              'COUNT(*) FILTER (WHERE failed_at IS NOT NULL) AS failed_count',
               'MIN(created_at) FILTER (WHERE failed_at IS NULL) AS oldest_non_failed_timestamp',
             ).to_sql,
           )
