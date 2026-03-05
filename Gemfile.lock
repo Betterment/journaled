@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    journaled (6.2.5)
+    journaled (6.2.6)
       activejob
       activerecord
       activesupport
@@ -258,4 +258,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   2.6.3
+  4.0.7
