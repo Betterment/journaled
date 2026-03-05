@@ -180,6 +180,28 @@ RSpec.describe Journaled::Outbox::Worker do
         worker.start
         expect(processor).to have_received(:process_batch).at_least(:twice)
       end
+
+      it 'still emits queue metrics after errors' do
+        call_count = 0
+        allow(processor).to receive(:process_batch) do
+          call_count += 1
+          Timecop.travel(61.seconds) if call_count == 1
+          worker.shutdown if call_count >= 2
+          raise StandardError, 'Kinesis error'
+        end
+
+        emitted = {}
+        callback = ->(name, _started, _finished, _unique_id, payload) { emitted[name] = payload }
+
+        ActiveSupport::Notifications.subscribed(callback, /journaled\.worker\.queue_/) do
+          worker.start
+
+          timeout = 2.seconds.from_now
+          sleep 0.1 until emitted.key?('journaled.worker.queue_total_count') || Time.current > timeout
+        end
+
+        expect(emitted).to have_key('journaled.worker.queue_total_count')
+      end
     end
   end
 

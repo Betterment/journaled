@@ -59,9 +59,10 @@ module Journaled
             break
           end
 
+          emit_metrics_if_needed
+
           begin
             process_batch
-            emit_metrics_if_needed
           rescue StandardError => e
             Rails.logger.error("Worker error: #{e.class} - #{e.message}")
             Rails.logger.error(e.backtrace.join("\n"))
