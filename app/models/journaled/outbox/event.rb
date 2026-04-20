@@ -16,7 +16,7 @@ module Journaled
 
       skip_audit_log
 
-      attribute :event_data, :json
+      attribute :event_data, ActiveRecord::Type::Json.new
 
       validates :event_type, :event_data, :partition_key, :stream_name, presence: true
       validate :failed_at_and_failure_reason_must_be_consistent
