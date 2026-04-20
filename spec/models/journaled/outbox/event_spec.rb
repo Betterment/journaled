@@ -7,6 +7,12 @@ RSpec.describe Journaled::Outbox::Event do
     skip "Outbox tests require PostgreSQL" unless ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
   end
 
+  describe 'event_data attribute type' do
+    it 'uses a concrete type object so the class can be loaded without a database connection' do
+      expect(described_class.attribute_types['event_data']).to be_a(ActiveRecord::Type::Json)
+    end
+  end
+
   describe '.connection' do
     it 'uses the configured base class connection' do
       expect(described_class.connection).to eq(ActiveRecord::Base.connection)
