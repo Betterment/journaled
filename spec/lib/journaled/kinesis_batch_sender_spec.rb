@@ -163,7 +163,7 @@ RSpec.describe Journaled::KinesisBatchSender do
       it 'logs a warning about the split' do
         subject.send_batch(events)
 
-        expect(Rails.logger).to have_received(:warn).with(/Batch too large.*splitting in half/)
+        expect(Rails.logger).to have_received(:warn).with(/Kinesis ValidationException.*splitting in half/)
       end
     end
 
@@ -180,7 +180,7 @@ RSpec.describe Journaled::KinesisBatchSender do
           .and_raise(Aws::Kinesis::Errors::ValidationException.new(nil, 'Request Payload is too large'))
       end
 
-      it 'marks the event as a permanent failure' do
+      it 'marks the event as a permanent failure with the Kinesis error message' do
         result = subject.send_batch(events)
 
         expect(result[:succeeded]).to be_empty
@@ -189,7 +189,7 @@ RSpec.describe Journaled::KinesisBatchSender do
         failure = result[:failed].first
         expect(failure.event).to eq(event)
         expect(failure.error_code).to eq('ValidationException')
-        expect(failure.error_message).to eq('Record exceeds Kinesis payload limit')
+        expect(failure.error_message).to eq('Request Payload is too large')
         expect(failure.permanent?).to be true
       end
     end
@@ -202,17 +202,23 @@ RSpec.describe Journaled::KinesisBatchSender do
       let(:event) { create_database_event }
       let(:events) { [event] }
 
-      context 'when entire batch fails with validation exception' do
+      context 'when entire batch fails with a non-payload ValidationException' do
         before do
           allow(kinesis_client).to receive(:put_records)
             .and_raise(Aws::Kinesis::Errors::ValidationException.new(nil, 'Invalid stream name'))
         end
 
-        it 'raises the exception (configuration error, not event data error)' do
-          expect { subject.send_batch(events) }.to raise_error(
-            Aws::Kinesis::Errors::ValidationException,
-            'Invalid stream name',
-          )
+        it 'isolates the offending event(s) as permanent failures with the original error message' do
+          result = subject.send_batch(events)
+
+          expect(result[:succeeded]).to be_empty
+          expect(result[:failed].length).to eq(1)
+
+          failure = result[:failed].first
+          expect(failure.event).to eq(event)
+          expect(failure.error_code).to eq('ValidationException')
+          expect(failure.error_message).to eq('Invalid stream name')
+          expect(failure.permanent?).to be true
         end
       end
 

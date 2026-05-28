@@ -15,7 +15,8 @@ module Journaled
       'ValidationException',
     ].freeze
 
-    BATCH_TOO_LARGE_PATTERN = /too large/i
+    # Kinesis rejects any record whose data blob exceeds 1 MB.
+    KINESIS_MAX_RECORD_BYTES = 1_048_576
 
     # Send a batch of database events to Kinesis
     #
@@ -43,9 +44,7 @@ module Journaled
         response = kinesis_client.put_records(stream_name:, records:)
         process_response(response, stream_events)
       rescue Aws::Kinesis::Errors::ValidationException => e
-        raise unless e.message.match?(BATCH_TOO_LARGE_PATTERN)
-
-        handle_batch_too_large(stream_name, stream_events)
+        handle_validation_error(stream_name, stream_events, e.message)
       rescue StandardError => e
         # Handle transient errors (throttling, network issues, service unavailable)
         handle_transient_batch_error(e, stream_events)
@@ -94,16 +93,19 @@ module Journaled
       )
     end
 
-    def handle_batch_too_large(stream_name, stream_events)
+    # Isolate the offending record(s) when Kinesis rejects the batch with a
+    # ValidationException (aggregate payload too large, per-record size limit,
+    # invalid partition key, etc.). Splits the batch in half and retries
+    # recursively until a single offending event is marked as a permanent failure.
+    def handle_validation_error(stream_name, stream_events, error_message)
       if stream_events.size <= 1
-        # Single event exceeds payload limit — treat as permanent failure
         return {
           succeeded: [],
           failed: stream_events.map do |event|
             create_failed_event(
               event,
               error_code: 'ValidationException',
-              error_message: 'Record exceeds Kinesis payload limit',
+              error_message:,
               transient: false,
             )
           end,
@@ -111,7 +113,8 @@ module Journaled
       end
 
       Rails.logger.warn(
-        "[journaled] Batch too large for Kinesis (#{stream_events.size} events), splitting in half and retrying",
+        "[journaled] Kinesis ValidationException for batch of #{stream_events.size} events " \
+        "(#{error_message}), splitting in half and retrying",
       )
 
       mid = stream_events.size / 2

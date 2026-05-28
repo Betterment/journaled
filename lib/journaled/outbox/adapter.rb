@@ -14,6 +14,7 @@ module Journaled
     # 4. Start workers: bundle exec rake journaled_worker:work
     class Adapter < Journaled::DeliveryAdapter
       class TableNotFoundError < StandardError; end
+      class RecordTooLargeError < StandardError; end
 
       # Delivers events by inserting them into the database
       #
@@ -28,6 +29,15 @@ module Journaled
         records = events.map do |event|
           # Exclude the application-level id - the database will generate its own using uuid_generate_v7()
           event_data = event.journaled_attributes.except(:id)
+
+          # The DB-generated id adds bytes to the JSON payload at send time, so a
+          # placeholder id keeps this estimate honest.
+          payload_bytesize = event_data.merge(id: SecureRandom.uuid).to_json.bytesize
+          if payload_bytesize > KinesisBatchSender::KINESIS_MAX_RECORD_BYTES
+            raise RecordTooLargeError, "Journaled event '#{event.journaled_attributes[:event_type]}' " \
+              "exceeds Kinesis #{KinesisBatchSender::KINESIS_MAX_RECORD_BYTES}-byte per-record limit " \
+              "(#{payload_bytesize} bytes); refusing to enqueue."
+          end
 
           {
             event_type: event.journaled_attributes[:event_type],
