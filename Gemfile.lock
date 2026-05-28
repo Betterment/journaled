@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    journaled (6.2.7)
+    journaled (6.2.8)
       activejob
       activerecord
       activesupport
