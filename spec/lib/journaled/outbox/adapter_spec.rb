@@ -136,6 +136,49 @@ RSpec.describe Journaled::Outbox::Adapter do
           }.to change { Journaled::Outbox::Event.count }.by(2)
         end
       end
+
+      context 'when an event exceeds the Kinesis per-record size limit' do
+        let(:huge_payload) { 'x' * (Journaled::KinesisBatchSender::KINESIS_MAX_RECORD_BYTES + 1) }
+        let(:oversized_event) do
+          instance_double(
+            event_class,
+            id: SecureRandom.uuid,
+            journaled_attributes: {
+              id: 'big_id',
+              event_type: 'big_event',
+              payload: huge_payload,
+              created_at: Time.current,
+            },
+            journaled_partition_key: 'test_partition_key',
+            journaled_stream_name: 'test_stream',
+          )
+        end
+
+        context 'with a single oversized event' do
+          let(:events) { [oversized_event] }
+
+          it 'raises RecordTooLargeError and inserts nothing' do
+            expect {
+              described_class.deliver(events:, enqueue_opts:)
+            }.to raise_error(
+              Journaled::Outbox::Adapter::RecordTooLargeError,
+              /big_event.*exceeds Kinesis.*per-record limit/,
+            )
+            expect(Journaled::Outbox::Event.count).to eq(0)
+          end
+        end
+
+        context 'mixed with a normally-sized event' do
+          let(:events) { [event, oversized_event] }
+
+          it 'raises and inserts none of the events in the batch' do
+            expect {
+              described_class.deliver(events:, enqueue_opts:)
+            }.to raise_error(Journaled::Outbox::Adapter::RecordTooLargeError)
+            expect(Journaled::Outbox::Event.count).to eq(0)
+          end
+        end
+      end
     end
 
     context 'when tables do not exist' do
