@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Journaled
-  VERSION = "6.2.9"
+  VERSION = "6.3.0"
 end
