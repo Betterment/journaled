@@ -858,6 +858,19 @@ gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
 
+### Upgrading from 6.2.9
+
+`journal_changes_to` now accepts a `tagged:` option (default `false`). This is
+opt-in at the Ruby level, so no application code needs to change to upgrade.
+
+However, the `journaled/change` JSON schema (`journaled_schemas/journaled/change.json`)
+now permits an optional `tags` property on every `Journaled::Change` event,
+regardless of whether any particular model opts in. If you (or a downstream
+consumer of this stream) validate `Journaled::Change` payloads against a copy
+of this schema, or against your own stricter schema, that schema needs to
+tolerate a `tags` field being present, since any model in the producing app
+could begin sending it independently of your consumer.
+
 ### Upgrading from 4.3.0
 
 Versions of Journaled prior to 5.0 would enqueue events one at a time, but 5.0
