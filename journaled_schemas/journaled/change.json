@@ -41,6 +41,10 @@
     },
     "actor": {
       "type": ["string", null]
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": true
     }
   }
 }

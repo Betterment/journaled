@@ -56,14 +56,18 @@ module Journaled::Changes
   end
 
   class_methods do
-    def journal_changes_to(*attribute_names, as:, enqueue_with: {})
+    def journal_changes_to(*attribute_names, as:, enqueue_with: {}, tagged: false)
       if attribute_names.empty? || attribute_names.any? { |n| !n.is_a?(Symbol) }
         raise "one or more symbol attribute_name arguments is required"
       end
 
       raise "as: must be a symbol" unless as.is_a?(Symbol)
 
-      _journaled_change_definitions << Journaled::ChangeDefinition.new(attribute_names: attribute_names, logical_operation: as)
+      _journaled_change_definitions << Journaled::ChangeDefinition.new(
+        attribute_names: attribute_names,
+        logical_operation: as,
+        tagged: tagged,
+      )
       journaled_attribute_names.concat(attribute_names)
       journaled_enqueue_opts.merge!(enqueue_with)
     end

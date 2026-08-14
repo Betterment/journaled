@@ -359,6 +359,17 @@ record is created or destroyed, an event will be sent to Kinesis with the follow
   * `actor` - a string (usually a rails global_id) representing who
     performed the action.
 
+Pass `tagged: true` to also include a `tags` field sourced from the current
+[tagged event](#tagged-events) context (e.g. `Journaled.tag!`/`Journaled.tagged`):
+
+```ruby
+journal_changes_to :email, :first_name, :last_name, as: :identity_change, tagged: true
+```
+
+This is useful for capturing metadata (like an impersonating actor) that isn't
+itself a column on the model. It defaults to `false` to preserve the existing
+event shape for models that don't opt in.
+
 Callback-bypassing database methods like `update_all`, `delete_all`,
 `update_columns` and `delete` are intercepted and will require an
 additional `force: true` argument if they would interfere with change

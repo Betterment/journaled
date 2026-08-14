@@ -140,6 +140,24 @@ RSpec.describe Journaled::ChangeWriter do
       expect(subject.journaled_change_for("update", {}).logical_operation).to eq("identity_change")
     end
 
+    it "defaults to untagged" do
+      expect(subject.journaled_change_for("update", {})).not_to be_tagged
+    end
+
+    context "when the change_definition is tagged" do
+      let(:change_definition) do
+        Journaled::ChangeDefinition.new(
+          attribute_names: %i(name rank serial_number),
+          logical_operation: "identity_change",
+          tagged: true,
+        )
+      end
+
+      it "builds a tagged Journaled::Change" do
+        expect(subject.journaled_change_for("update", {})).to be_tagged
+      end
+    end
+
     it "doesn't set journaled_stream_name if model class doesn't respond to it" do
       expect(subject.journaled_change_for("update", {}).journaled_stream_name).to be_nil
     end

@@ -3,7 +3,7 @@
 class Journaled::ChangeWriter
   attr_reader :model, :change_definition
 
-  delegate :attribute_names, :logical_operation, to: :change_definition
+  delegate :attribute_names, :logical_operation, :tagged, to: :change_definition
 
   def initialize(model:, change_definition:)
     @model = model
@@ -33,6 +33,7 @@ class Journaled::ChangeWriter
       journaled_stream_name: journaled_stream_name,
       journaled_enqueue_opts: model.journaled_enqueue_opts,
       actor: actor_uri,
+      tagged: tagged,
     )
   end
 

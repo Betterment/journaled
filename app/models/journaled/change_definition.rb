@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 class Journaled::ChangeDefinition
-  attr_reader :attribute_names, :logical_operation
+  attr_reader :attribute_names, :logical_operation, :tagged
 
-  def initialize(attribute_names:, logical_operation:)
+  def initialize(attribute_names:, logical_operation:, tagged: false)
     @attribute_names = attribute_names.map(&:to_s)
     @logical_operation = logical_operation
+    @tagged = tagged
     @validated = false
   end
 
