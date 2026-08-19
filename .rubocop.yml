@@ -5,8 +5,8 @@ inherit_gem:
     - config/default.yml
 
 AllCops:
-  TargetRubyVersion: 3.2
-  TargetRailsVersion: 7.2
+  TargetRubyVersion: 3.3
+  TargetRailsVersion: 8.0
   NewCops: enable
   Exclude:
     - 'spec/dummy/db/**/*'
