@@ -366,7 +366,7 @@ Pass `tagged: true` to also include a `tags` field sourced from the current
 journal_changes_to :email, :first_name, :last_name, as: :identity_change, tagged: true
 ```
 
-This is useful for capturing metadata (like an impersonating actor) that isn't
+This is useful for capturing metadata (like a session or visitor ID) that isn't
 itself a column on the model. It defaults to `false` to preserve the existing
 event shape for models that don't opt in.
 
@@ -858,7 +858,7 @@ gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
 
-### Upgrading from 6.2.9
+### Upgrading from 6.x
 
 `journal_changes_to` now accepts a `tagged:` option (default `false`). This is
 opt-in at the Ruby level, so no application code needs to change to upgrade.
