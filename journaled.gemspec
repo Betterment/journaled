@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
 
   s.files = Dir["{app,config,db,lib,journaled_schemas,rbi}/**/*", "LICENSE", "Rakefile", "README.md"]
 
-  s.required_ruby_version = ">= 3.2"
+  s.required_ruby_version = ">= 3.3"
 
   s.post_install_message = File.read("UPGRADING") if File.exist?('UPGRADING')
 
@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
   s.add_dependency "activesupport"
   s.add_dependency "aws-sdk-kinesis", "< 2"
   s.add_dependency "json-schema"
-  s.add_dependency "railties", ">= 7.2", "< 8.2"
+  s.add_dependency "railties", ">= 8.0", "< 8.2"
 
   s.add_development_dependency "appraisal"
   s.add_development_dependency "betterlint"
