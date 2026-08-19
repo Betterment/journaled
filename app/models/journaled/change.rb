@@ -26,7 +26,8 @@ class Journaled::Change
                  changes:,
                  journaled_stream_name:,
                  journaled_enqueue_opts:,
-                 actor:)
+                 actor:,
+                 tagged: false)
     @table_name = table_name
     @record_id = record_id
     @database_operation = database_operation
@@ -35,5 +36,18 @@ class Journaled::Change
     @journaled_stream_name = journaled_stream_name
     @journaled_enqueue_opts = journaled_enqueue_opts
     @actor = actor
+    @tagged = tagged
+  end
+
+  def tagged?
+    @tagged
+  end
+
+  def tags
+    Journaled::Current.tags
+  end
+
+  def journaled_attributes
+    tagged? ? super.merge(tags:) : super
   end
 end

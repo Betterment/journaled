@@ -359,6 +359,17 @@ record is created or destroyed, an event will be sent to Kinesis with the follow
   * `actor` - a string (usually a rails global_id) representing who
     performed the action.
 
+Pass `tagged: true` to also include a `tags` field sourced from the current
+[tagged event](#tagged-events) context (e.g. `Journaled.tag!`/`Journaled.tagged`):
+
+```ruby
+journal_changes_to :email, :first_name, :last_name, as: :identity_change, tagged: true
+```
+
+This is useful for capturing metadata (like a session or visitor ID) that isn't
+itself a column on the model. It defaults to `false` to preserve the existing
+event shape for models that don't opt in.
+
 Callback-bypassing database methods like `update_all`, `delete_all`,
 `update_columns` and `delete` are intercepted and will require an
 additional `force: true` argument if they would interfere with change
@@ -846,6 +857,19 @@ code releases), this gem generally aims to support jobs enqueued by the prior
 gem version.
 
 As such, **we always recommend upgrading only one major version at a time.**
+
+### Upgrading from 6.x
+
+`journal_changes_to` now accepts a `tagged:` option (default `false`). This is
+opt-in at the Ruby level, so no application code needs to change to upgrade.
+
+However, the `journaled/change` JSON schema (`journaled_schemas/journaled/change.json`)
+now permits an optional `tags` property on every `Journaled::Change` event,
+regardless of whether any particular model opts in. If you (or a downstream
+consumer of this stream) validate `Journaled::Change` payloads against a copy
+of this schema, or against your own stricter schema, that schema needs to
+tolerate a `tags` field being present, since any model in the producing app
+could begin sending it independently of your consumer.
 
 ### Upgrading from 4.3.0
 
