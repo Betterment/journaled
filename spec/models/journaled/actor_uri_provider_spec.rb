@@ -4,7 +4,6 @@ require 'rails_helper'
 
 RSpec.describe Journaled::ActorUriProvider do
   describe "#actor_uri" do
-    let(:current_attributes) { double(:[] => nil) }
     let(:actor) { double(to_global_id: actor_gid) }
     let(:actor_gid) { double(to_s: "my_fancy_gid") }
     let(:program_name) { "/usr/local/bin/puma_or_something" }
@@ -18,15 +17,9 @@ RSpec.describe Journaled::ActorUriProvider do
       $PROGRAM_NAME = orig_program_name
     end
 
-    before do
-      allow(Journaled::Current.instance)
-        .to receive(:attributes).and_return(current_attributes)
-    end
-
     it "returns the global ID of the entity returned by Current.journaled_actor_proc.call if set" do
-      allow(current_attributes).to receive(:[]).and_return(-> { actor })
+      Journaled::Current.journaled_actor_proc = -> { actor }
       expect(subject.actor_uri).to eq("my_fancy_gid")
-      expect(current_attributes).to have_received(:[]).with(:journaled_actor_proc)
     end
 
     context "when running in rake" do
