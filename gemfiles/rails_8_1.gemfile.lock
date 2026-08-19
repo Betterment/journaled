@@ -1,5 +1,5 @@
 PATH
-  remote: .
+  remote: ..
   specs:
     journaled (6.3.0)
       activejob
@@ -256,6 +256,7 @@ DEPENDENCIES
   betterlint
   journaled!
   pg
+  railties (~> 8.1.0)
   rspec-rails
   rspec_junit_formatter
   spring
