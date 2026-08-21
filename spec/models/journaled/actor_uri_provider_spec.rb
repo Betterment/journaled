@@ -14,7 +14,9 @@ RSpec.describe Journaled::ActorUriProvider do
       orig_program_name = $PROGRAM_NAME
       $PROGRAM_NAME = program_name
       example.run
+    ensure
       $PROGRAM_NAME = orig_program_name
+      Journaled::Current.reset
     end
 
     it "returns the global ID of the entity returned by Current.journaled_actor_proc.call if set" do
