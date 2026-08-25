@@ -182,6 +182,7 @@ module Journaled
         delete_all: '.destroy_all',
         insert: '.create!',
         insert_all: '.each { create!(...) }',
+        insert_all!: '.each { create!(...) }',
         update_all: '.find_each { update!(...) }',
         upsert: '.create_or_find_by!',
         upsert_all: '.each { create_or_find_by!(...) }',

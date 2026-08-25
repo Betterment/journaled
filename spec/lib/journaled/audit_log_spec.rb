@@ -558,7 +558,7 @@ RSpec.describe Journaled::AuditLog do
     end
   end
 
-  describe '.delete_all, .insert, .insert_all, .update_all, .upsert, .upsert_all' do
+  describe '.delete_all, .insert, .insert_all, .insert_all!, .update_all, .upsert, .upsert_all' do
     subject { MyModel }
 
     before do
@@ -566,6 +566,7 @@ RSpec.describe Journaled::AuditLog do
         def self.delete_all(*); end
         def self.insert(*); end
         def self.insert_all(*); end
+        def self.insert_all!(*); end
         def self.update_all(*); end
         def self.upsert(*); end
         def self.upsert_all(*); end
@@ -576,6 +577,7 @@ RSpec.describe Journaled::AuditLog do
       expect { subject.delete_all }.to not_raise_error
       expect { subject.insert(foo: 'bar') }.to not_raise_error
       expect { subject.insert_all([{ foo: 'bar' }]) }.to not_raise_error
+      expect { subject.insert_all!([{ foo: 'bar' }]) }.to not_raise_error
       expect { subject.update_all([{ foo: 'bar' }]) }.to not_raise_error
       expect { subject.upsert(foo: 'bar') }.to not_raise_error
       expect { subject.upsert_all([{ foo: 'bar' }]) }.to not_raise_error
@@ -597,6 +599,10 @@ RSpec.describe Journaled::AuditLog do
           `insert_all` is blocked because it skips callbacks and audit logs!
           Consider using `.each { create!(...) }` instead, or pass `_force: true` as an argument.
         MSG
+        expect { subject.insert_all!([{ foo: 'bar' }]) }.to raise_error(<<~MSG)
+          `insert_all!` is blocked because it skips callbacks and audit logs!
+          Consider using `.each { create!(...) }` instead, or pass `_force: true` as an argument.
+        MSG
         expect { subject.update_all([{ foo: 'bar' }]) }.to raise_error(<<~MSG)
           `update_all` is blocked because it skips callbacks and audit logs!
           Consider using `.find_each { update!(...) }` instead, or pass `_force: true` as an argument.
@@ -615,6 +621,7 @@ RSpec.describe Journaled::AuditLog do
         expect { subject.delete_all(_force: true) }.to not_raise_error
         expect { subject.insert(foo: 'bar', _force: true) }.to not_raise_error
         expect { subject.insert_all([{ foo: 'bar' }], _force: true) }.to not_raise_error
+        expect { subject.insert_all!([{ foo: 'bar' }], _force: true) }.to not_raise_error
         expect { subject.update_all([{ foo: 'bar' }], _force: true) }.to not_raise_error
         expect { subject.upsert(foo: 'bar', _force: true) }.to not_raise_error
         expect { subject.upsert_all([{ foo: 'bar' }], _force: true) }.to not_raise_error
